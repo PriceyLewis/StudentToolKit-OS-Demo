@@ -9,7 +9,7 @@ Set these before each release:
 ## 2) Assets and production flags
 - Final app icon and splash assets are set.
 - Remove debug/dev-only logs and feature flags.
-- Confirm notifications and purchases are production-safe.
+- Confirm notifications, backup/restore, and policy links are production-safe.
 
 ## 3) Build profiles
 Use `eas.json` profiles:
@@ -25,7 +25,7 @@ Use `eas.json` profiles:
 - Fresh install -> onboarding -> dashboard
 - App works offline
 - Restart phone and app still works
-- Pro purchase/restore works
+- Backup export/restore works
 - No blank screens on corrupted local data
 
 ## 6) Build and submit commands

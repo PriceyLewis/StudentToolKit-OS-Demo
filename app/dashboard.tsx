@@ -1830,7 +1830,7 @@ export default function DashboardScreen() {
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Advanced Analytics</Text>
           <Text style={styles.sectionMeta}>Tap to open Analytics</Text>
-          <View style={styles.proPreviewCards}>
+          <View style={styles.analyticsPreviewCards}>
             <TouchableOpacity
               activeOpacity={0.85}
               style={styles.previewCard}
@@ -2055,7 +2055,7 @@ export default function DashboardScreen() {
             style={styles.linkButton}
             onPress={() => router.push("/disclaimer" as any)}
           >
-            <Text style={styles.linkButtonText}>Terms of Use (In-App)</Text>
+            <Text style={styles.linkButtonText}>Open Terms of Use URL</Text>
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.8}
@@ -2110,7 +2110,7 @@ export default function DashboardScreen() {
             Terms: Personal planning tool only. Not medical/financial advice.
           </Text>
           <Text style={styles.infoText}>
-            All features in this release are available to every user.
+            All features are free to use. There is no premium tier and no payment flow in this build.
           </Text>
         </View>
       </Animated.View>
@@ -2683,7 +2683,7 @@ const createStyles = ({ COLORS, RADIUS, SPACING }: AppThemeTokens) => StyleSheet
     color: COLORS.white,
     fontWeight: "700",
   },
-  proPreviewCards: {
+  analyticsPreviewCards: {
     marginTop: SPACING.md,
     gap: SPACING.sm,
   },
@@ -2868,4 +2868,3 @@ const createStyles = ({ COLORS, RADIUS, SPACING }: AppThemeTokens) => StyleSheet
     fontWeight: "600",
   },
 });
-

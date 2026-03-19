@@ -15,7 +15,7 @@ The app combines several planning flows into one mobile experience:
 - weekly review and analytics views
 - local backup, restore, and notification flows
 
-All user data is stored locally on-device with AsyncStorage. There is no account system and no backend service in the current version.
+All user data is stored locally on-device with AsyncStorage. There is no account system, no payment flow, no premium tier, and no backend service in the current version.
 
 ## Features
 
@@ -35,6 +35,7 @@ All user data is stored locally on-device with AsyncStorage. There is no account
 - export / sharing support for selected planning flows
 - backup and restore utilities
 - privacy and disclaimer screens included in-app
+- all features available for free to every user
 
 ## Tech Stack
 

@@ -16,6 +16,7 @@ Student Toolkit OS is a local-first mobile product mock built with Expo Router a
 
 - Built as a cohesive product concept, not just isolated screens
 - Uses React Context plus AsyncStorage for persistent local state
+- All features are free to use in this build with no premium tier or payment flow
 - Includes export, notifications, backup, and review flows to make the mock feel like a real product
 - Structured so authentication, sync, and cloud analytics could be added later without rewriting the entire app
 

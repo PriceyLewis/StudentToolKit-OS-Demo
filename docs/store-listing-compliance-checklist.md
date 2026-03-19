@@ -29,11 +29,7 @@ Re-check these if you add:
 - account sync
 - third-party SDKs
 
-## Purchases
-- Confirm in-app purchase metadata and screenshots.
-- Refund language points to Apple/Google store policies.
-
 ## Final verification
 - Policy URLs open correctly from the app.
 - Onboarding and core flows work with no account.
-- Pro-gated screens clearly explain locked features.
+- Dashboard links and privacy flows match the current app behavior.

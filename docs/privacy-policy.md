@@ -18,9 +18,10 @@ Data is stored locally on your device using AsyncStorage.
 - We do not sell personal data.
 - We do not share personal data with third parties.
 - We do not run analytics on your local entries.
+- We do not process payments or require subscriptions to use app features.
 
-## Purchases
-All features are currently included in the free v1 release. If paid features return later, purchases are processed by Apple App Store and Google Play. We do not store payment card information.
+## Access and pricing
+All current features are available to every user at no cost. There is no premium tier in this version of the app.
 
 ## Contact
 studenttoolkithelp@gmail.com
@@ -31,4 +32,3 @@ We may update this policy as app features change. The date at the top reflects t
 ## Public URLs
 Privacy Policy URL: https://github.com/PriceyLewis/StudentToolKit-OS/blob/main/docs/privacy-policy.md
 Terms of Use URL: https://github.com/PriceyLewis/StudentToolKit-OS/blob/main/docs/terms-of-use.md
-
