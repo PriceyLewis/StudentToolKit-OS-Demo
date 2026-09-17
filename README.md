@@ -1,51 +1,49 @@
 # Student Toolkit OS
 
-Student Toolkit OS is a local-first Expo app concept for students and early-career users who want one place to manage academics, fitness, habits, career progress, and income goals.
+Student Toolkit OS is a local-first React Native / Expo portfolio application for students and early-career users who want one place to manage academics, habits, fitness, career progress and personal goals.
 
-It is built as a portfolio-ready product mock: the goal is to demonstrate product thinking, multi-screen UX, persistent state, and app structure rather than backend scale.
+The project is deliberately positioned as a **portfolio-ready mobile product**, not a production SaaS. It demonstrates multi-screen UX, shared application state, local persistence, recoverability and product thinking without requiring a hosted backend.
 
-## Overview
+## Why This Project Is In My Portfolio
 
-The app combines several planning flows into one mobile experience:
+This project demonstrates that I can take a broad product idea and turn it into a coherent mobile application rather than a collection of disconnected screens. The main engineering focus is keeping multiple feature areas consistent while sharing persisted state safely across the app.
 
-- onboarding and profile setup
-- a central dashboard with scores, targets, coaching prompts, and quick actions
-- revision, gym, hustle, and CV planning screens
-- habit tracking with completion history and streaks
-- weekly review and analytics views
-- local backup, restore, and notification flows
+## Core Product Flows
 
-All user data is stored locally on-device with AsyncStorage. There is no account system, no payment flow, no premium tier, and no backend service in the current version.
+- Onboarding and local profile setup
+- Central dashboard with academic, fitness, hustle and career progress
+- Revision planning and study targets
+- Gym and fitness tracking
+- Side-income / hustle planning
+- CV building and career progress
+- Habit tracking with completion history, weighting and streaks
+- Weekly review and analytics views
+- Local notifications and reminders
+- Backup, restore, export and sharing flows
 
-## Features
+## Technical Highlights
 
-### Core product flows
+- **React Native + Expo Router** for a cross-platform mobile application structure
+- **TypeScript** across application code
+- **React Context** for shared app-level state
+- **AsyncStorage** for local-first persistence across app restarts
+- **Expo Notifications** for reminder flows
+- **React Native Chart Kit** for visual progress reporting
+- Defensive backup / restore validation with rollback protection if a restore fails
+- Responsive product flows designed to remain useful without an account or internet connection
 
-- Dashboard with aggregate performance scoring across academic, fitness, hustle, and career categories
-- Performance target tracking with deadlines
-- Planner-style screens for revision, gym progress, side-income hustle, and CV building
-- Habit management with completion tracking, difficulty weighting, and streak logic
-- Weekly review summaries with insight prompts
-- Analytics screens that turn activity into a progress narrative
+## Quality & Verification
 
-### Product polish
+GitHub Actions runs the core static quality checks on pushes and pull requests:
 
-- local-first persistence via React Context + AsyncStorage
-- reminder support with Expo Notifications
-- export / sharing support for selected planning flows
-- backup and restore utilities
-- privacy and disclaimer screens included in-app
-- all features available for free to every user
+```bash
+npm run lint
+npm run typecheck
+```
 
-## Tech Stack
+These checks catch lint regressions and TypeScript errors before changes reach the demo branch.
 
-- Expo
-- Expo Router
-- React Native
-- TypeScript
-- AsyncStorage
-- Expo Notifications
-- React Native Chart Kit
+The project does not currently claim full automated end-to-end mobile test coverage. The most valuable future testing upgrade would be automated coverage around persistence, backup / restore and the main planner journeys.
 
 ## Running Locally
 
@@ -53,7 +51,7 @@ All user data is stored locally on-device with AsyncStorage. There is no account
 
 - Node.js 18+
 - npm
-- Expo-compatible iOS simulator, Android emulator, or Expo Go
+- Expo-compatible iOS simulator, Android emulator, web browser or Expo Go
 
 ### Install
 
@@ -61,7 +59,7 @@ All user data is stored locally on-device with AsyncStorage. There is no account
 npm install
 ```
 
-### Start the app
+### Start
 
 ```bash
 npm start
@@ -75,61 +73,42 @@ npm run ios
 npm run web
 ```
 
-### Quality checks
-
-```bash
-npm run lint
-npm run typecheck
-```
-
 ## Project Structure
 
 ```text
 app/         Expo Router routes and screen entry points
-context/     app-wide state, profile data, performance data, habits, notifications, theme
-src/screens/ larger screen implementations such as analytics, habits, and weekly review
-src/utils/   persistence, backup, notification, and review helpers
-components/  reusable UI and visualization components
-docs/        privacy, terms, release notes, QA, and demo materials
+context/     app-wide state, profile, performance, habits, notifications and theme
+src/screens/ larger feature screens such as analytics, habits and weekly review
+src/utils/   persistence, backup, notification and review helpers
+components/  reusable UI and visualisation components
+docs/        demo, privacy, QA and release documentation
 ```
 
-## Current Positioning
+## Product Scope
 
-This repository is best presented as:
+All current user data is stored locally on-device. There is no production account service, payment flow or hosted backend in this portfolio version.
 
-- a polished mobile product concept
-- a local-first state architecture example
-- a portfolio project showing end-to-end UX scope across multiple connected flows
-
-It is not currently a production SaaS app. Missing production pieces include:
-
-- authentication
-- cloud sync
-- backend data storage
-- server-side analytics
-- automated test coverage for core flows
+That is intentional: the repository is designed to make the mobile architecture and UX easy for a recruiter or reviewer to inspect without needing external services or credentials.
 
 ## Documentation
 
-Additional project material lives in [`docs/`](./docs):
+Additional project material lives in [`docs/`](./docs), including:
 
-- `docs/demo-script.md`
-- `docs/privacy-policy.md`
-- `docs/terms-of-use.md`
-- `docs/release-pipeline-checklist.md`
-- `docs/stage6-offline-qa-checklist.md`
-- `docs/store-listing-compliance-checklist.md`
+- demo walkthrough material
+- privacy and terms drafts
+- offline QA checks
+- release / store-readiness checklists
 
-## Suggested Next Steps
+## If Taken Further
 
-If this project were taken beyond portfolio/demo scope, the next sensible upgrades would be:
+The next production-oriented upgrades would be:
 
-- authentication and cross-device sync
+- authentication and optional cross-device sync
 - calendar integration and smarter reminders
 - stronger analytics and forecasting
-- a hardened design system
-- automated tests around persistence and planner workflows
+- a more formal reusable design system
+- automated end-to-end tests for critical flows
 
 ## License / Use
 
-No license file is currently included in this repository. If you plan to publish or share the project more broadly, add an explicit license so usage terms are clear.
+No license is currently included. The repository is published as portfolio source for review rather than as a reusable open-source package.
