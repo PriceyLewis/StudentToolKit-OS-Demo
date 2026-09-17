@@ -3,6 +3,7 @@ import { File, Paths } from "expo-file-system";
 import { APP_DATA_KEYS } from "./resetAppData";
 
 const BACKUP_VERSION = 1;
+const BACKUP_APP_ID = "student-toolkit";
 const BACKUP_FILE_PREFIX = "student-toolkit-backup";
 
 type PickedBackupFile = {
@@ -33,7 +34,7 @@ const buildPayload = async (): Promise<BackupPayload> => {
   return {
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    app: "student-toolkit",
+    app: BACKUP_APP_ID,
     data,
   };
 };
@@ -50,27 +51,60 @@ export async function createLocalBackupFile() {
 }
 
 function parseBackupPayload(raw: string): BackupPayload {
-  const parsed = JSON.parse(raw) as unknown;
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    throw new Error("This file is not valid JSON.");
+  }
 
   if (!isObject(parsed)) {
     throw new Error("Invalid backup format.");
+  }
+
+  if (parsed.app !== BACKUP_APP_ID) {
+    throw new Error("This backup was not created by Student Toolkit OS.");
+  }
+
+  if (parsed.version !== BACKUP_VERSION) {
+    throw new Error(
+      `Unsupported backup version. Expected version ${BACKUP_VERSION}.`,
+    );
+  }
+
+  if (typeof parsed.exportedAt !== "string" || !parsed.exportedAt.trim()) {
+    throw new Error("Backup metadata is incomplete.");
   }
 
   if (!isObject(parsed.data)) {
     throw new Error("Invalid backup data.");
   }
 
+  const allowedSet = new Set<string>(getAllowedKeys());
   const normalizedData: Record<string, string | null> = {};
+
   Object.entries(parsed.data).forEach(([key, value]) => {
+    if (!allowedSet.has(key)) {
+      return;
+    }
+
     if (typeof value === "string" || value === null) {
       normalizedData[key] = value;
+      return;
     }
+
+    throw new Error(`Invalid value for backup key: ${key}`);
   });
 
+  if (Object.keys(normalizedData).length === 0) {
+    throw new Error("The backup does not contain any recognised app data.");
+  }
+
   return {
-    version: typeof parsed.version === "number" ? parsed.version : BACKUP_VERSION,
-    exportedAt: typeof parsed.exportedAt === "string" ? parsed.exportedAt : "",
-    app: typeof parsed.app === "string" ? parsed.app : "unknown",
+    version: BACKUP_VERSION,
+    exportedAt: parsed.exportedAt,
+    app: BACKUP_APP_ID,
     data: normalizedData,
   };
 }
@@ -81,23 +115,45 @@ export async function restoreBackupFromFile(file: PickedBackupFile) {
   const allowedKeys = getAllowedKeys();
   const allowedSet = new Set<string>(allowedKeys);
 
+  const previousEntries = await AsyncStorage.multiGet(allowedKeys);
+  const previousPairs = previousEntries.filter(
+    (entry): entry is [string, string] => typeof entry[1] === "string",
+  );
+
   const setPairs: [string, string][] = [];
+  const removeKeys: string[] = [];
+
   Object.entries(payload.data).forEach(([key, value]) => {
     if (!allowedSet.has(key)) {
       return;
     }
+
     if (typeof value === "string") {
       setPairs.push([key, value]);
+    } else {
+      removeKeys.push(key);
     }
   });
 
-  await AsyncStorage.multiRemove(allowedKeys);
-  if (setPairs.length > 0) {
-    await AsyncStorage.multiSet(setPairs);
+  try {
+    if (removeKeys.length > 0) {
+      await AsyncStorage.multiRemove(removeKeys);
+    }
+    if (setPairs.length > 0) {
+      await AsyncStorage.multiSet(setPairs);
+    }
+  } catch (error) {
+    // Best-effort rollback so a failed restore does not silently wipe local data.
+    await AsyncStorage.multiRemove(allowedKeys);
+    if (previousPairs.length > 0) {
+      await AsyncStorage.multiSet(previousPairs);
+    }
+    throw error;
   }
 
   return {
     restoredKeys: setPairs.length,
+    clearedKeys: removeKeys.length,
     backupVersion: payload.version,
     exportedAt: payload.exportedAt,
   };
