@@ -9,7 +9,9 @@
     "ios": "expo start --ios --port 8082",
     "web": "expo start --web --port 8082",
     "lint": "eslint app components constants context hooks src --ext .ts,.tsx,.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.js",
+    "check": "npm run lint && npm run typecheck && npm test"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
