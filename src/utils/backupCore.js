@@ -83,7 +83,7 @@ function parseBackupPayload(
   };
 }
 
-export async function applyRestoreTransaction(storage, allowedKeys, data) {
+async function applyRestoreTransaction(storage, allowedKeys, data) {
   const allowedSet = new Set(allowedKeys);
   const previousEntries = await storage.multiGet(allowedKeys);
   const previousPairs = previousEntries.filter((entry) => typeof entry[1] === "string");
