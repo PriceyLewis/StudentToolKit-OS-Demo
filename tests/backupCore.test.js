@@ -1,9 +1,6 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import {
-  applyRestoreTransaction,
-  parseBackupPayload,
-} from "../src/utils/backupCore.js";
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { applyRestoreTransaction, parseBackupPayload } = require("../src/utils/backupCore.js");
 
 const allowedKeys = ["profileData", "habits"];
 
