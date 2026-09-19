@@ -49,10 +49,14 @@ export default function AnalyticsScreen() {
   const [displayConsistency14, setDisplayConsistency14] = useState(0);
   const [displayConsistency30, setDisplayConsistency30] = useState(0);
   const todayDateKey = toLocalDateKey(new Date());
+  const analyticsReferenceDate = useMemo(
+    () => new Date(`${todayDateKey}T12:00:00`),
+    [todayDateKey],
+  );
 
   const history30 = useMemo(
-    () => filterHistoryToDateWindow(performanceHistory, 30),
-    [performanceHistory, todayDateKey],
+    () => filterHistoryToDateWindow(performanceHistory, 30, analyticsReferenceDate),
+    [analyticsReferenceDate, performanceHistory],
   );
   const currentMonthHistory = useMemo(() => {
     const monthPrefix = todayDateKey.slice(0, 7);
@@ -67,15 +71,18 @@ export default function AnalyticsScreen() {
   const career = useMemo(() => toSeries(history30, "career"), [history30]);
 
   const consistency14 = useMemo(
-    () => dateCoveragePercent(performanceHistory, 14),
-    [performanceHistory, todayDateKey],
+    () => dateCoveragePercent(performanceHistory, 14, analyticsReferenceDate),
+    [analyticsReferenceDate, performanceHistory],
   );
   const consistency30 = useMemo(
-    () => dateCoveragePercent(performanceHistory, 30),
-    [performanceHistory, todayDateKey],
+    () => dateCoveragePercent(performanceHistory, 30, analyticsReferenceDate),
+    [analyticsReferenceDate, performanceHistory],
   );
   const activeHabits = useMemo(() => habits.filter((habit) => habit.active), [habits]);
-  const habit30DateKeys = useMemo(() => lastNLocalDateKeys(30), [todayDateKey]);
+  const habit30DateKeys = useMemo(
+    () => lastNLocalDateKeys(30, analyticsReferenceDate),
+    [analyticsReferenceDate],
+  );
   const habitConsistency30Series = useMemo(() => {
     return habit30DateKeys.map((dateKey) => {
       const day = habitCompletion[dateKey] || {};
