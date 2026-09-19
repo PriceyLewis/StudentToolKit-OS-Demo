@@ -151,6 +151,7 @@ const createDemoEntries = (): [string, string][] => {
 };
 
 const writeDemoData = async () => {
+  await AsyncStorage.multiRemove([...APP_DATA_KEYS] as string[]);
   await AsyncStorage.multiSet(createDemoEntries());
   await AsyncStorage.setItem(DEMO_ACTIVE_KEY, "1");
 };
