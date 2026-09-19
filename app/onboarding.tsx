@@ -1,20 +1,45 @@
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { useState, useContext } from "react";
 import { ProfileContext } from "../context/ProfileContext";
+import { PerformanceContext } from "../context/PerformanceContext";
+import { useHabits } from "../context/HabitContext";
 import { useRouter } from "expo-router";
 import { useTheme, useThemedStyles, type AppThemeTokens } from "../context/theme";
+import { seedPortfolioDemo } from "../src/utils/demoData";
 
 export default function Onboarding() {
   const { COLORS } = useTheme();
   const styles = useThemedStyles(createStyles);
   const [name, setName] = useState("");
   const [focus, setFocus] = useState("");
-  const { completeOnboarding } = useContext(ProfileContext);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const { completeOnboarding, rehydrateProfile } = useContext(ProfileContext);
+  const { rehydratePerformanceData } = useContext(PerformanceContext);
+  const { rehydrateHabitsData } = useHabits();
   const router = useRouter();
 
-  const handleContinue = () => {
-    completeOnboarding(name, focus);
+  const handleContinue = async () => {
+    await completeOnboarding(name.trim() || "Student", focus.trim());
     router.replace("/");
+  };
+
+  const handleDemo = async () => {
+    if (demoLoading) {
+      return;
+    }
+
+    setDemoLoading(true);
+    try {
+      await seedPortfolioDemo();
+      await Promise.all([
+        rehydrateProfile(),
+        rehydratePerformanceData(),
+        rehydrateHabitsData(),
+      ]);
+      router.replace("/");
+    } finally {
+      setDemoLoading(false);
+    }
   };
 
   return (
@@ -26,7 +51,7 @@ export default function Onboarding() {
         <View style={styles.badgeRow}>
           <Text style={styles.eyebrow}>Student Toolkit OS</Text>
           <View style={styles.mockBadge}>
-            <Text style={styles.mockBadgeText}>Portfolio Mock</Text>
+            <Text style={styles.mockBadgeText}>Interactive Portfolio Demo</Text>
           </View>
         </View>
 
@@ -43,8 +68,33 @@ export default function Onboarding() {
             <Text style={styles.featurePillText}>Analytics</Text>
           </View>
           <View style={styles.featurePill}>
-            <Text style={styles.featurePillText}>Exports</Text>
+            <Text style={styles.featurePillText}>Local-first</Text>
           </View>
+        </View>
+
+        <View style={styles.demoCard}>
+          <View style={styles.demoCopy}>
+            <Text style={styles.demoTitle}>Want to see the finished experience?</Text>
+            <Text style={styles.demoBody}>
+              Load realistic sample goals, habit history and revision data instantly. Your existing local data is restored when you exit demo mode.
+            </Text>
+          </View>
+          <TouchableOpacity
+            activeOpacity={0.82}
+            style={styles.demoButton}
+            onPress={handleDemo}
+            disabled={demoLoading}
+          >
+            <Text style={styles.demoButtonText}>
+              {demoLoading ? "Loading demo..." : "Try Interactive Demo"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or create your own local workspace</Text>
+          <View style={styles.dividerLine} />
         </View>
 
         <TextInput
@@ -64,133 +114,194 @@ export default function Onboarding() {
         />
 
         <TouchableOpacity activeOpacity={0.8} style={styles.button} onPress={handleContinue}>
-          <Text style={styles.buttonText}>Enter Dashboard</Text>
+          <Text style={styles.buttonText}>Create My Dashboard</Text>
         </TouchableOpacity>
+
+        <Text style={styles.localNote}>
+          No account required. Portfolio data stays on this device unless you export a backup.
+        </Text>
       </View>
     </View>
   );
 }
 
-const createStyles = ({ COLORS, RADIUS, SPACING }: AppThemeTokens) => StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: SPACING.screenWide,
-    justifyContent: "center",
-    backgroundColor: COLORS.backgroundAlt,
-    overflow: "hidden",
-  },
-  glowPrimary: {
-    position: "absolute",
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: COLORS.primarySoft,
-    top: -70,
-    right: -80,
-    opacity: 0.95,
-  },
-  glowSecondary: {
-    position: "absolute",
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: COLORS.surfaceMuted,
-    bottom: -80,
-    left: -70,
-    opacity: 0.9,
-  },
-  heroPanel: {
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.xxxl,
-    shadowColor: COLORS.black,
-    shadowOpacity: 0.09,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
-  },
-  badgeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  eyebrow: {
-    color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-  },
-  mockBadge: {
-    borderRadius: 999,
-    backgroundColor: COLORS.primarySoft,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  mockBadgeText: {
-    color: COLORS.primary,
-    fontWeight: "700",
-    fontSize: 11,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "800",
-    marginBottom: SPACING.md,
-    color: COLORS.textPrimary,
-    letterSpacing: -0.6,
-  },
-  subtitle: {
-    color: COLORS.textSecondary,
-    lineHeight: 22,
-    marginBottom: SPACING.xl,
-  },
-  featureRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: SPACING.sm,
-    marginBottom: SPACING.section,
-  },
-  featurePill: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surfaceMuted,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-  },
-  featurePillText: {
-    color: COLORS.textPrimary,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.input,
-    borderRadius: RADIUS.button,
-    marginBottom: SPACING.xl,
-    backgroundColor: COLORS.card,
-    color: COLORS.textPrimary,
-  },
-  button: {
-    backgroundColor: COLORS.primary,
-    padding: SPACING.xxlPlus,
-    borderRadius: RADIUS.button,
-    alignItems: "center",
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontWeight: "700",
-  },
-});
+const createStyles = ({ COLORS, RADIUS, SPACING }: AppThemeTokens) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: SPACING.screenWide,
+      justifyContent: "center",
+      backgroundColor: COLORS.backgroundAlt,
+      overflow: "hidden",
+    },
+    glowPrimary: {
+      position: "absolute",
+      width: 260,
+      height: 260,
+      borderRadius: 130,
+      backgroundColor: COLORS.primarySoft,
+      top: -70,
+      right: -80,
+      opacity: 0.95,
+    },
+    glowSecondary: {
+      position: "absolute",
+      width: 220,
+      height: 220,
+      borderRadius: 110,
+      backgroundColor: COLORS.surfaceMuted,
+      bottom: -80,
+      left: -70,
+      opacity: 0.9,
+    },
+    heroPanel: {
+      backgroundColor: COLORS.card,
+      borderRadius: RADIUS.card,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      padding: SPACING.xxxl,
+      shadowColor: COLORS.black,
+      shadowOpacity: 0.09,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 4,
+    },
+    badgeRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: SPACING.md,
+      marginBottom: SPACING.md,
+      flexWrap: "wrap",
+    },
+    eyebrow: {
+      color: COLORS.primary,
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 1.2,
+      textTransform: "uppercase",
+    },
+    mockBadge: {
+      borderRadius: 999,
+      backgroundColor: COLORS.primarySoft,
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.xs,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
+    mockBadgeText: {
+      color: COLORS.primary,
+      fontWeight: "700",
+      fontSize: 11,
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: "800",
+      marginBottom: SPACING.md,
+      color: COLORS.textPrimary,
+      letterSpacing: -0.6,
+    },
+    subtitle: {
+      color: COLORS.textSecondary,
+      lineHeight: 22,
+      marginBottom: SPACING.xl,
+    },
+    featureRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: SPACING.sm,
+      marginBottom: SPACING.xl,
+    },
+    featurePill: {
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.surfaceMuted,
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.sm,
+    },
+    featurePillText: {
+      color: COLORS.textPrimary,
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    demoCard: {
+      borderRadius: RADIUS.card,
+      borderWidth: 1,
+      borderColor: COLORS.primary,
+      backgroundColor: COLORS.primarySoft,
+      padding: SPACING.lg,
+      gap: SPACING.md,
+      marginBottom: SPACING.xl,
+    },
+    demoCopy: {
+      gap: SPACING.xs,
+    },
+    demoTitle: {
+      color: COLORS.textPrimary,
+      fontWeight: "800",
+      fontSize: 16,
+    },
+    demoBody: {
+      color: COLORS.textSecondary,
+      lineHeight: 19,
+      fontSize: 12,
+    },
+    demoButton: {
+      backgroundColor: COLORS.primary,
+      borderRadius: RADIUS.button,
+      paddingVertical: SPACING.md,
+      alignItems: "center",
+    },
+    demoButtonText: {
+      color: COLORS.white,
+      fontWeight: "800",
+    },
+    dividerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.sm,
+      marginBottom: SPACING.lg,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: COLORS.border,
+    },
+    dividerText: {
+      color: COLORS.textMuted,
+      fontSize: 11,
+      textAlign: "center",
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      padding: SPACING.input,
+      borderRadius: RADIUS.button,
+      marginBottom: SPACING.xl,
+      backgroundColor: COLORS.card,
+      color: COLORS.textPrimary,
+    },
+    button: {
+      backgroundColor: COLORS.primary,
+      padding: SPACING.xxlPlus,
+      borderRadius: RADIUS.button,
+      alignItems: "center",
+      shadowColor: COLORS.primary,
+      shadowOpacity: 0.22,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 3,
+    },
+    buttonText: {
+      color: COLORS.white,
+      fontWeight: "700",
+    },
+    localNote: {
+      color: COLORS.textMuted,
+      fontSize: 11,
+      textAlign: "center",
+      lineHeight: 16,
+      marginTop: SPACING.md,
+    },
+  });
