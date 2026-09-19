@@ -28,7 +28,12 @@ import {
   restoreBackupFromFile,
 } from "../src/utils/backup";
 import { resetLocalData } from "../src/utils/resetAppData";
-import { exitPortfolioDemo, isPortfolioDemoActive, resetPortfolioDemo } from "../src/utils/demoData";
+import {
+  exitPortfolioDemo,
+  isPortfolioDemoActive,
+  resetPortfolioDemo,
+  seedPortfolioDemo,
+} from "../src/utils/demoData";
 import { getJSON, setJSON } from "../src/utils/storage";
 
 const BADGE_TOAST_DURATION_MS = 1800;
@@ -1074,40 +1079,36 @@ export default function DashboardScreen() {
     });
   }, [badges, enqueueBadgeToast, unlockedBadgeIds]);
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const stored = await getJSON<Partial<FocusTimerState> | null>(FOCUS_TIMER_STORAGE_KEY, null);
-      if (!mounted) {
-        return;
-      }
+  const rehydrateFocusTimer = useCallback(async () => {
+    const stored = await getJSON<Partial<FocusTimerState> | null>(FOCUS_TIMER_STORAGE_KEY, null);
+    const selectedMinutes = clampFocusMinutes(Number(stored?.selectedMinutes ?? DEFAULT_FOCUS_MINUTES));
+    const remainingSeconds = Math.max(
+      0,
+      Math.round(Number(stored?.remainingSeconds ?? selectedMinutes * 60))
+    );
+    const sessionHistory = Array.isArray(stored?.sessionHistory)
+      ? (stored?.sessionHistory as FocusSessionRecord[])
+          .filter((entry) => typeof entry?.date === "string" && Number.isFinite(Number(entry?.minutes)))
+          .map((entry) => ({
+            date: entry.date,
+            minutes: clampFocusMinutes(Number(entry.minutes)),
+          }))
+      : [];
 
-      const selectedMinutes = clampFocusMinutes(Number(stored?.selectedMinutes ?? DEFAULT_FOCUS_MINUTES));
-      const remainingSeconds = Math.max(
-        0,
-        Math.round(Number(stored?.remainingSeconds ?? selectedMinutes * 60))
-      );
-      const sessionHistory = Array.isArray(stored?.sessionHistory)
-        ? (stored?.sessionHistory as FocusSessionRecord[])
-            .filter((entry) => typeof entry?.date === "string" && Number.isFinite(Number(entry?.minutes)))
-            .map((entry) => ({
-              date: entry.date,
-              minutes: clampFocusMinutes(Number(entry.minutes)),
-            }))
-        : [];
-
-      setFocusSelectedMinutes(selectedMinutes);
-      setFocusInputValue(String(selectedMinutes));
-      setFocusRemainingSeconds(remainingSeconds || selectedMinutes * 60);
-      setFocusCompletedSessions(Math.max(0, Math.round(Number(stored?.completedSessions ?? 0))));
-      setFocusSessionHistory(sessionHistory);
-      setFocusTimerHydrated(true);
-    })();
-
-    return () => {
-      mounted = false;
-    };
+    setFocusIsRunning(false);
+    setFocusSelectedMinutes(selectedMinutes);
+    setFocusInputValue(String(selectedMinutes));
+    setFocusRemainingSeconds(remainingSeconds || selectedMinutes * 60);
+    setFocusCompletedSessions(Math.max(0, Math.round(Number(stored?.completedSessions ?? 0))));
+    setFocusSessionHistory(sessionHistory);
+    setFocusTimerHydrated(true);
   }, []);
+
+  useEffect(() => {
+    rehydrateFocusTimer().catch(() => {
+      setFocusTimerHydrated(true);
+    });
+  }, [rehydrateFocusTimer]);
 
   useEffect(() => {
     if (!focusTimerHydrated) {
@@ -1236,13 +1237,26 @@ export default function DashboardScreen() {
       rehydratePerformanceData(),
       rehydrateHabitsData(),
       rehydrateNotificationPrefs(),
+      rehydrateFocusTimer(),
     ]);
   }, [
     rehydrateHabitsData,
+    rehydrateFocusTimer,
     rehydrateNotificationPrefs,
     rehydratePerformanceData,
     rehydrateProfile,
   ]);
+
+  const handleStartPortfolioDemo = useCallback(async () => {
+    try {
+      await seedPortfolioDemo();
+      await rehydrateAllData();
+      setDemoModeActive(true);
+      Alert.alert("Demo loaded", "A realistic sample week is now ready to explore.");
+    } catch {
+      Alert.alert("Demo failed", "Could not load the portfolio sample data.");
+    }
+  }, [rehydrateAllData]);
 
   const handleResetPortfolioDemo = useCallback(async () => {
     try {
@@ -2188,7 +2202,17 @@ export default function DashboardScreen() {
                 <Text style={styles.resetButtonText}>Exit demo & restore previous data</Text>
               </TouchableOpacity>
             </>
-          ) : null}
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.linkButton}
+              onPress={() => {
+                handleStartPortfolioDemo().catch(() => {});
+              }}
+            >
+              <Text style={styles.linkButtonText}>Load interactive portfolio demo</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             activeOpacity={0.8}
             style={styles.linkButton}
