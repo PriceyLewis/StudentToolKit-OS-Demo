@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useThemedStyles, type AppThemeTokens } from "../context/theme";
 
-const LAST_UPDATED = "2026-02-19";
+const LAST_UPDATED = "2026-09-19";
 
 export default function DisclaimerScreen() {
   const styles = useThemedStyles(createStyles);
