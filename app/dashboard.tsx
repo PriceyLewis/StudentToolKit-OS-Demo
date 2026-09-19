@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { ProgressChart } from "react-native-chart-kit";
 import PerformanceGraph from "../components/PerformanceGraph";
+import TodayCommandCenter, { type TodayPriority } from "../components/dashboard/TodayCommandCenter";
 import { useHabits } from "../context/HabitContext";
 import { useNotificationPrefs } from "../context/NotificationContext";
 import { PerformanceContext } from "../context/PerformanceContext";
@@ -27,15 +28,16 @@ import {
   restoreBackupFromFile,
 } from "../src/utils/backup";
 import { resetLocalData } from "../src/utils/resetAppData";
+import { exitPortfolioDemo, isPortfolioDemoActive, resetPortfolioDemo } from "../src/utils/demoData";
 import { getJSON, setJSON } from "../src/utils/storage";
 
 const BADGE_TOAST_DURATION_MS = 1800;
 const FOCUS_TIMER_STORAGE_KEY = "focusTimerState";
 const DEFAULT_FOCUS_MINUTES = 25;
 const MAX_FOCUS_MINUTES = 180;
-const POLICY_LAST_UPDATED = "2026-02-19";
-const PRIVACY_POLICY_URL = "https://github.com/PriceyLewis/StudentToolKit-OS/blob/main/docs/privacy-policy.md";
-const TERMS_OF_USE_URL = "https://github.com/PriceyLewis/StudentToolKit-OS/blob/main/docs/terms-of-use.md";
+const POLICY_LAST_UPDATED = "2026-09-19";
+const PRIVACY_POLICY_URL = "https://github.com/PriceyLewis/StudentToolKit-OS-Demo/blob/main/docs/privacy-policy.md";
+const TERMS_OF_USE_URL = "https://github.com/PriceyLewis/StudentToolKit-OS-Demo/blob/main/docs/terms-of-use.md";
 type CoachingPreset = "strict" | "balanced" | "aggressive";
 type CoachingPresetConfig = {
   fitnessDisciplineHighThreshold: number;
@@ -199,7 +201,7 @@ export default function DashboardScreen() {
     resetPerformanceData,
     rehydratePerformanceData,
   } = useContext(PerformanceContext);
-  const { name, resetProfile, rehydrateProfile } = useContext(ProfileContext);
+  const { name, primaryFocus, resetProfile, rehydrateProfile } = useContext(ProfileContext);
   const {
     activeHabits,
     habitCompletion,
@@ -261,7 +263,14 @@ export default function DashboardScreen() {
   const [focusCompletedSessions, setFocusCompletedSessions] = useState(0);
   const [focusSessionHistory, setFocusSessionHistory] = useState<FocusSessionRecord[]>([]);
   const [focusTimerHydrated, setFocusTimerHydrated] = useState(false);
+  const [demoModeActive, setDemoModeActive] = useState(false);
   const coachingConfig = COACHING_PRESET_CONFIG[coachingPreset];
+
+  useEffect(() => {
+    isPortfolioDemoActive()
+      .then(setDemoModeActive)
+      .catch(() => setDemoModeActive(false));
+  }, []);
 
   const cards = [
     {
@@ -673,6 +682,76 @@ export default function DashboardScreen() {
   const nearestDeadline = deadlineCountdowns
     .filter((item) => item.daysRemaining !== null)
     .sort((a, b) => (a.daysRemaining ?? 9999) - (b.daysRemaining ?? 9999))[0];
+
+  const todayPriorities = useMemo<TodayPriority[]>(() => {
+    const areas = [
+      {
+        id: "academic",
+        label: "Strengthen academic performance",
+        detail: "Open the adaptive revision scheduler and protect focused study time.",
+        href: "/revision",
+        score: academicScore,
+      },
+      {
+        id: "fitness",
+        label: "Protect physical consistency",
+        detail: "Log training and keep your weekly conditioning target moving.",
+        href: "/gym",
+        score: fitnessScore,
+      },
+      {
+        id: "hustle",
+        label: "Move your build forward",
+        detail: "Schedule one concrete income or portfolio-building action.",
+        href: "/hustle",
+        score: hustleScore,
+      },
+      {
+        id: "career",
+        label: "Advance your professional profile",
+        detail: "Improve your CV, evidence, or next career action.",
+        href: "/cv",
+        score: careerScore,
+      },
+    ].sort((a, b) => a.score - b.score);
+
+    const priorities: TodayPriority[] = [];
+
+    if (activeHabits.length > 0 && doneCount < activeHabits.length) {
+      priorities.push({
+        id: "habits",
+        label: "Finish today's habits",
+        detail: `${activeHabits.length - doneCount} habit${
+          activeHabits.length - doneCount === 1 ? "" : "s"
+        } remaining. Clear these before the day gets away from you.`,
+        href: "/habits",
+        meta: `${doneCount}/${activeHabits.length}`,
+      });
+    }
+
+    areas.forEach((area) => {
+      if (priorities.length >= 3) {
+        return;
+      }
+      priorities.push({
+        id: area.id,
+        label: area.label,
+        detail: area.detail,
+        href: area.href,
+        meta: `${area.score}/100`,
+      });
+    });
+
+    return priorities.slice(0, 3);
+  }, [
+    academicScore,
+    activeHabits.length,
+    careerScore,
+    doneCount,
+    fitnessScore,
+    hustleScore,
+  ]);
+
   const habitStreakById = useMemo(() => {
     const recentKeys = getRecentDateKeys(365);
     const streaks: Record<string, number> = {};
@@ -1113,6 +1192,10 @@ export default function DashboardScreen() {
 
   const runReset = useCallback(
     async () => {
+      if (demoModeActive) {
+        await exitPortfolioDemo();
+        setDemoModeActive(false);
+      }
       await resetLocalData();
       await resetNotificationPrefs();
       await resetHabitsData();
@@ -1122,6 +1205,7 @@ export default function DashboardScreen() {
       router.replace("/onboarding");
     },
     [
+      demoModeActive,
       resetHabitsData,
       resetNotificationPrefs,
       resetPerformanceData,
@@ -1160,6 +1244,29 @@ export default function DashboardScreen() {
     rehydrateProfile,
   ]);
 
+  const handleResetPortfolioDemo = useCallback(async () => {
+    try {
+      await resetPortfolioDemo();
+      await rehydrateAllData();
+      setDemoModeActive(true);
+      Alert.alert("Demo reset", "The sample goals, habits and history have been restored.");
+    } catch {
+      Alert.alert("Demo reset failed", "Could not reload the portfolio sample data.");
+    }
+  }, [rehydrateAllData]);
+
+  const handleExitPortfolioDemo = useCallback(async () => {
+    try {
+      await exitPortfolioDemo();
+      await rehydrateAllData();
+      setDemoModeActive(false);
+      router.replace("/");
+      Alert.alert("Demo closed", "Your previous local workspace has been restored.");
+    } catch {
+      Alert.alert("Could not exit demo", "Your previous local data has not been changed.");
+    }
+  }, [rehydrateAllData, router]);
+
   const handleExportBackup = useCallback(async () => {
     try {
       const file = await createLocalBackupFile();
@@ -1182,6 +1289,10 @@ export default function DashboardScreen() {
   const performRestoreBackup = useCallback(async () => {
     try {
       const file = await pickBackupFile();
+      if (demoModeActive) {
+        await exitPortfolioDemo();
+        setDemoModeActive(false);
+      }
       const result = await restoreBackupFromFile(file);
       await rehydrateAllData();
       Alert.alert(
@@ -1195,7 +1306,7 @@ export default function DashboardScreen() {
       }
       Alert.alert("Restore failed", "Could not restore data from this backup file.");
     }
-  }, [rehydrateAllData]);
+  }, [demoModeActive, rehydrateAllData]);
 
   const confirmRestoreBackup = useCallback(() => {
     Alert.alert("Restore local backup?", "Current local data will be replaced.", [
@@ -1489,6 +1600,16 @@ export default function DashboardScreen() {
             <Text style={styles.kpiValue}>{streakDays}d</Text>
           </View>
         </View>
+
+        <TodayCommandCenter
+          primaryFocus={primaryFocus}
+          priorities={todayPriorities}
+          habitsDone={doneCount}
+          habitsTotal={activeHabits.length}
+          nearestDeadlineLabel={nearestDeadline?.label ?? null}
+          nearestDeadlineDays={nearestDeadline?.daysRemaining ?? null}
+          onOpen={(href) => router.push(href as any)}
+        />
 
         <View style={[styles.topActionsRow, isCompact ? styles.topActionsRowCompact : null]}>
           <TouchableOpacity
@@ -2043,6 +2164,31 @@ export default function DashboardScreen() {
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Settings & Info</Text>
           <Text style={styles.infoText}>Last updated: {POLICY_LAST_UPDATED}</Text>
+          {demoModeActive ? (
+            <>
+              <Text style={styles.infoText}>
+                Interactive portfolio demo is active. Sample data is isolated from the workspace that was on this device before the demo started.
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.linkButton}
+                onPress={() => {
+                  handleResetPortfolioDemo().catch(() => {});
+                }}
+              >
+                <Text style={styles.linkButtonText}>Reset demo sample data</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.resetButton}
+                onPress={() => {
+                  handleExitPortfolioDemo().catch(() => {});
+                }}
+              >
+                <Text style={styles.resetButtonText}>Exit demo & restore previous data</Text>
+              </TouchableOpacity>
+            </>
+          ) : null}
           <TouchableOpacity
             activeOpacity={0.8}
             style={styles.linkButton}
