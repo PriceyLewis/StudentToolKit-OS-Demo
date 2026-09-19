@@ -1,4 +1,4 @@
-export function getLocalDateKey(date) {
+function getLocalDateKey(date) {
   const value = new Date(date);
   const year = value.getFullYear();
   const month = `${value.getMonth() + 1}`.padStart(2, "0");
@@ -6,7 +6,7 @@ export function getLocalDateKey(date) {
   return `${year}-${month}-${day}`;
 }
 
-export function toggleHabitCompletion(completion, dateKey, habitId) {
+function toggleHabitCompletion(completion, dateKey, habitId) {
   const snapshot = { ...(completion || {}) };
   const day = { ...(snapshot[dateKey] || {}) };
   day[habitId] = !day[habitId];
@@ -14,7 +14,7 @@ export function toggleHabitCompletion(completion, dateKey, habitId) {
   return snapshot;
 }
 
-export function calculateHabitStreak(habits, completion, fromDate = new Date()) {
+function calculateHabitStreak(habits, completion, fromDate = new Date()) {
   const activeHabits = habits.filter((habit) => habit.active);
   if (activeHabits.length === 0) {
     return 0;
@@ -39,3 +39,5 @@ export function calculateHabitStreak(habits, completion, fromDate = new Date()) 
 
   return streak;
 }
+
+module.exports = { getLocalDateKey, toggleHabitCompletion, calculateHabitStreak };
