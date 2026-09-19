@@ -1,10 +1,6 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import {
-  calculateHabitStreak,
-  getLocalDateKey,
-  toggleHabitCompletion,
-} from "../src/utils/habitLogic.js";
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { calculateHabitStreak, getLocalDateKey, toggleHabitCompletion } = require("../src/utils/habitLogic.js");
 
 test("habit completion survives serialization like an app restart", () => {
   const today = "2026-09-19";
