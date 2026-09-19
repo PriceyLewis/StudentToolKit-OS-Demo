@@ -1,4 +1,4 @@
-export function toLocalDateKey(date) {
+function toLocalDateKey(date) {
   const value = new Date(date);
   const year = value.getFullYear();
   const month = `${value.getMonth() + 1}`.padStart(2, "0");
@@ -6,7 +6,7 @@ export function toLocalDateKey(date) {
   return `${year}-${month}-${day}`;
 }
 
-export function lastNLocalDateKeys(days, referenceDate = new Date()) {
+function lastNLocalDateKeys(days, referenceDate = new Date()) {
   const count = Math.max(0, Math.round(Number(days) || 0));
   const reference = new Date(referenceDate);
   reference.setHours(0, 0, 0, 0);
@@ -21,7 +21,7 @@ export function lastNLocalDateKeys(days, referenceDate = new Date()) {
   return keys;
 }
 
-export function filterHistoryToDateWindow(history, days, referenceDate = new Date()) {
+function filterHistoryToDateWindow(history, days, referenceDate = new Date()) {
   const keys = new Set(lastNLocalDateKeys(days, referenceDate));
 
   return [...history]
@@ -29,7 +29,7 @@ export function filterHistoryToDateWindow(history, days, referenceDate = new Dat
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
-export function dateCoveragePercent(history, days, referenceDate = new Date()) {
+function dateCoveragePercent(history, days, referenceDate = new Date()) {
   const count = Math.max(1, Math.round(Number(days) || 1));
   const keys = new Set(lastNLocalDateKeys(count, referenceDate));
   const covered = new Set(
@@ -40,3 +40,5 @@ export function dateCoveragePercent(history, days, referenceDate = new Date()) {
 
   return Math.round((covered.size / count) * 100);
 }
+
+module.exports = { toLocalDateKey, lastNLocalDateKeys, filterHistoryToDateWindow, dateCoveragePercent };
