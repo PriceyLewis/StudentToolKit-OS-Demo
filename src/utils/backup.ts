@@ -17,6 +17,19 @@ type PickedBackupFile = {
 
 const getAllowedKeys = (): string[] => [...APP_DATA_KEYS];
 
+const restoreStorage = {
+  multiGet: async (keys: string[]): Promise<[string, string | null][]> => {
+    const entries = await AsyncStorage.multiGet(keys);
+    return entries.map(([key, value]) => [key, value]);
+  },
+  multiRemove: async (keys: string[]) => {
+    await AsyncStorage.multiRemove(keys);
+  },
+  multiSet: async (entries: [string, string][]) => {
+    await AsyncStorage.multiSet(entries);
+  },
+};
+
 const buildPayload = async (): Promise<BackupPayload> => {
   const keys = getAllowedKeys();
   const entries = await AsyncStorage.multiGet(keys);
@@ -54,7 +67,7 @@ export async function restoreBackupFromFile(file: PickedBackupFile) {
     allowedKeys,
   });
 
-  const transaction = await applyRestoreTransaction(AsyncStorage, allowedKeys, payload.data);
+  const transaction = await applyRestoreTransaction(restoreStorage, allowedKeys, payload.data);
 
   return {
     ...transaction,
