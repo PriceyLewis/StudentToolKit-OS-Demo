@@ -1,10 +1,6 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import {
-  dateCoveragePercent,
-  filterHistoryToDateWindow,
-  lastNLocalDateKeys,
-} from "../src/utils/dateMetrics.js";
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { dateCoveragePercent, filterHistoryToDateWindow, lastNLocalDateKeys } = require("../src/utils/dateMetrics.js");
 
 test("lastNLocalDateKeys returns exact local calendar days", () => {
   const reference = new Date(2026, 8, 19, 23, 30);
