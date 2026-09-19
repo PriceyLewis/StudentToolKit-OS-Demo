@@ -4,7 +4,7 @@
 
 **Interactive portfolio demo · React Native · Expo Router · TypeScript · Local-first**
 
-![Student Toolkit OS onboarding captured from the Expo web build](docs/screenshots/student-toolkit-onboarding.png)
+![Student Toolkit OS interactive demo dashboard captured from the Expo web build](docs/screenshots/student-toolkit-dashboard.png)
 
 [View the recruiter case study](https://priceylewis.github.io/projects/student-toolkit.html)
 
