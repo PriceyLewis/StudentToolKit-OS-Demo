@@ -1,6 +1,12 @@
 # Student Toolkit OS
 
+[![Quality checks](https://github.com/PriceyLewis/StudentToolKit-OS-Demo/actions/workflows/quality.yml/badge.svg)](https://github.com/PriceyLewis/StudentToolKit-OS-Demo/actions/workflows/quality.yml)
+
 **Interactive portfolio demo · React Native · Expo Router · TypeScript · Local-first**
+
+![Student Toolkit OS portfolio preview](https://priceylewis.github.io/assets/student-toolkit.svg)
+
+[View the recruiter case study](https://priceylewis.github.io/projects/student-toolkit.html)
 
 Student Toolkit OS is a cross-platform student performance and planning app that brings academics, habits, fitness, portfolio work and career progress into one coherent weekly system.
 
@@ -139,6 +145,12 @@ See [docs/architecture.md](./docs/architecture.md) for the data flow, persistenc
 For a concise interview walkthrough, see [docs/demo-script.md](./docs/demo-script.md).
 
 For the recommended screenshots and short portfolio video, see [docs/portfolio-capture-guide.md](./docs/portfolio-capture-guide.md).
+
+## Web demo deployment
+
+The repository now maintains a static Expo export on a dedicated `gh-pages` branch. See [docs/github-pages.md](./docs/github-pages.md) for the one-time Pages source setting and deployment URL.
+
+Local development is unaffected because the repository subpath is applied only during the deployment build.
 
 ## Running on other targets
 
