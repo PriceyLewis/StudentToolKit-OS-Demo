@@ -1,11 +1,6 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import {
-  buildRevisionPlan,
-  daysUntilDate,
-  parseLocalDate,
-  parseSubjects,
-} from "../src/utils/revisionPlanner.js";
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { buildRevisionPlan, daysUntilDate, parseLocalDate, parseSubjects } = require("../src/utils/revisionPlanner.js");
 
 test("parseSubjects trims duplicates and empty values", () => {
   assert.deepEqual(parseSubjects("Algorithms, Databases, Algorithms, , Cloud"), [
