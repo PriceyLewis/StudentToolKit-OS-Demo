@@ -23,7 +23,7 @@ function validateStoredValue(key, value) {
   }
 }
 
-export function parseBackupPayload(
+function parseBackupPayload(
   raw,
   {
     appId = "student-toolkit",
@@ -123,3 +123,5 @@ export async function applyRestoreTransaction(storage, allowedKeys, data) {
     clearedKeys: removeKeys.length,
   };
 }
+
+module.exports = { parseBackupPayload, applyRestoreTransaction };
