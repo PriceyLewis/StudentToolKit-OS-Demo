@@ -10,7 +10,7 @@ const INTENSITY_MULTIPLIERS = {
   intensive: 1.15,
 };
 
-export function parseSubjects(input) {
+function parseSubjects(input) {
   return String(input || "")
     .split(",")
     .map((subject) => subject.trim())
@@ -18,7 +18,7 @@ export function parseSubjects(input) {
     .filter((subject, index, all) => all.indexOf(subject) === index);
 }
 
-export function parseLocalDate(value) {
+function parseLocalDate(value) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || "").trim());
   if (!match) return null;
 
@@ -39,7 +39,7 @@ export function parseLocalDate(value) {
   return date;
 }
 
-export function daysUntilDate(dateString, referenceDate = new Date()) {
+function daysUntilDate(dateString, referenceDate = new Date()) {
   const target = parseLocalDate(dateString);
   if (!target) return null;
 
@@ -48,7 +48,7 @@ export function daysUntilDate(dateString, referenceDate = new Date()) {
   return Math.ceil((target.getTime() - reference.getTime()) / 86400000);
 }
 
-export function buildRevisionPlan({
+function buildRevisionPlan({
   subjects,
   weeklyHours,
   examDate,
@@ -146,3 +146,5 @@ export function buildRevisionPlan({
     allocations,
   };
 }
+
+module.exports = { parseSubjects, parseLocalDate, daysUntilDate, buildRevisionPlan };
