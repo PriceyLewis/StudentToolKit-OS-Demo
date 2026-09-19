@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last updated: 2026-02-19
+Last updated: 2026-09-19
 
 ## What data is stored
 The app stores the following data on your device:
@@ -30,5 +30,5 @@ studenttoolkithelp@gmail.com
 We may update this policy as app features change. The date at the top reflects the current version.
 
 ## Public URLs
-Privacy Policy URL: https://github.com/PriceyLewis/StudentToolKit-OS/blob/main/docs/privacy-policy.md
-Terms of Use URL: https://github.com/PriceyLewis/StudentToolKit-OS/blob/main/docs/terms-of-use.md
+Privacy Policy URL: https://github.com/PriceyLewis/StudentToolKit-OS-Demo/blob/main/docs/privacy-policy.md
+Terms of Use URL: https://github.com/PriceyLewis/StudentToolKit-OS-Demo/blob/main/docs/terms-of-use.md

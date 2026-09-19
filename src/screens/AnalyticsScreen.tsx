@@ -13,13 +13,12 @@ import PerformanceGraph from "../../components/PerformanceGraph";
 import { useHabits } from "../../context/HabitContext";
 import { PerformanceContext } from "../../context/PerformanceContext";
 import { useThemedStyles, type AppThemeTokens } from "../../context/theme";
-
-const lastN = (arr: any[], n: number) => arr.slice(Math.max(0, arr.length - n));
-
-const calcConsistency = (history: any[], days: number) => {
-  const slice = lastN(history, days);
-  return Math.round((slice.length / days) * 100);
-};
+import {
+  dateCoveragePercent,
+  filterHistoryToDateWindow,
+  lastNLocalDateKeys,
+  toLocalDateKey,
+} from "../utils/dateMetrics.js";
 
 const toSeries = (history: any[], key: "academic" | "fitness" | "hustle" | "career") =>
   history.map((h) => ({ date: h.date, value: h[key] }));
@@ -31,21 +30,6 @@ const toOverallSeries = (history: any[]) =>
   }));
 
 const formatPercent = (value: number) => `${Math.max(0, Math.min(100, value))}%`;
-const toLocalDateKey = (date: Date) => {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-const lastNLocalDateKeys = (n: number) => {
-  const keys: string[] = [];
-  for (let i = n - 1; i >= 0; i -= 1) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    keys.push(toLocalDateKey(d));
-  }
-  return keys;
-};
 const difficultyWeight = (difficulty?: string) =>
   difficulty === "hard" ? 2 : difficulty === "easy" ? 1 : 1.5;
 
@@ -64,18 +48,41 @@ export default function AnalyticsScreen() {
   const consistency30Count = useRef(new Animated.Value(0)).current;
   const [displayConsistency14, setDisplayConsistency14] = useState(0);
   const [displayConsistency30, setDisplayConsistency30] = useState(0);
+  const todayDateKey = toLocalDateKey(new Date());
+  const analyticsReferenceDate = useMemo(
+    () => new Date(`${todayDateKey}T12:00:00`),
+    [todayDateKey],
+  );
 
-  const history30 = useMemo(() => lastN(performanceHistory, 30), [performanceHistory]);
+  const history30 = useMemo(
+    () => filterHistoryToDateWindow(performanceHistory, 30, analyticsReferenceDate),
+    [analyticsReferenceDate, performanceHistory],
+  );
+  const currentMonthHistory = useMemo(() => {
+    const monthPrefix = todayDateKey.slice(0, 7);
+    return performanceHistory
+      .filter((entry) => entry.date.startsWith(monthPrefix))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [performanceHistory, todayDateKey]);
   const overall = useMemo(() => toOverallSeries(history30), [history30]);
   const academic = useMemo(() => toSeries(history30, "academic"), [history30]);
   const fitness = useMemo(() => toSeries(history30, "fitness"), [history30]);
   const hustle = useMemo(() => toSeries(history30, "hustle"), [history30]);
   const career = useMemo(() => toSeries(history30, "career"), [history30]);
 
-  const consistency14 = useMemo(() => calcConsistency(performanceHistory, 14), [performanceHistory]);
-  const consistency30 = useMemo(() => calcConsistency(performanceHistory, 30), [performanceHistory]);
+  const consistency14 = useMemo(
+    () => dateCoveragePercent(performanceHistory, 14, analyticsReferenceDate),
+    [analyticsReferenceDate, performanceHistory],
+  );
+  const consistency30 = useMemo(
+    () => dateCoveragePercent(performanceHistory, 30, analyticsReferenceDate),
+    [analyticsReferenceDate, performanceHistory],
+  );
   const activeHabits = useMemo(() => habits.filter((habit) => habit.active), [habits]);
-  const habit30DateKeys = useMemo(() => lastNLocalDateKeys(30), []);
+  const habit30DateKeys = useMemo(
+    () => lastNLocalDateKeys(30, analyticsReferenceDate),
+    [analyticsReferenceDate],
+  );
   const habitConsistency30Series = useMemo(() => {
     return habit30DateKeys.map((dateKey) => {
       const day = habitCompletion[dateKey] || {};
@@ -114,22 +121,22 @@ export default function AnalyticsScreen() {
   }, [habitStreakTimeline]);
 
   const bestAreaThisMonth = useMemo(() => {
-    if (history30.length === 0) return "No entries yet";
+    if (currentMonthHistory.length === 0) return "No entries yet";
 
     const averages = {
       Academic:
-        history30.reduce((total, item) => total + item.academic, 0) / history30.length,
+        currentMonthHistory.reduce((total, item) => total + item.academic, 0) / currentMonthHistory.length,
       Fitness:
-        history30.reduce((total, item) => total + item.fitness, 0) / history30.length,
+        currentMonthHistory.reduce((total, item) => total + item.fitness, 0) / currentMonthHistory.length,
       Hustle:
-        history30.reduce((total, item) => total + item.hustle, 0) / history30.length,
+        currentMonthHistory.reduce((total, item) => total + item.hustle, 0) / currentMonthHistory.length,
       Career:
-        history30.reduce((total, item) => total + item.career, 0) / history30.length,
+        currentMonthHistory.reduce((total, item) => total + item.career, 0) / currentMonthHistory.length,
     };
 
     const [name, score] = Object.entries(averages).sort((a, b) => b[1] - a[1])[0];
     return `${name} (${Math.round(score)}/100)`;
-  }, [history30]);
+  }, [currentMonthHistory]);
 
   const hasData = history30.length > 1;
   const hasAnyHistory = history30.length > 0;

@@ -1,71 +1,146 @@
 # Student Toolkit OS
 
-Student Toolkit OS is a local-first React Native / Expo portfolio application for students and early-career users who want one place to manage academics, habits, fitness, career progress and personal goals.
+**Interactive portfolio demo · React Native · Expo Router · TypeScript · Local-first**
 
-The project is deliberately positioned as a **portfolio-ready mobile product**, not a production SaaS. It demonstrates multi-screen UX, shared application state, local persistence, recoverability and product thinking without requiring a hosted backend.
+Student Toolkit OS is a cross-platform student performance and planning app that brings academics, habits, fitness, portfolio work and career progress into one coherent weekly system.
 
-## Why This Project Is In My Portfolio
+This repository is intentionally built as a **recruiter-friendly portfolio product** rather than a production SaaS. It demonstrates product design, state management, persistence, analytics, recoverability, testing and cross-platform mobile engineering without requiring an account or hosted backend.
 
-This project demonstrates that I can take a broad product idea and turn it into a coherent mobile application rather than a collection of disconnected screens. The main engineering focus is keeping multiple feature areas consistent while sharing persisted state safely across the app.
+## Try the interactive demo
 
-## Core Product Flows
+```bash
+npm install
+npm run web
+```
 
-- Onboarding and local profile setup
-- Central dashboard with academic, fitness, hustle and career progress
-- Revision planning and study targets
-- Gym and fitness tracking
-- Side-income / hustle planning
-- CV building and career progress
-- Habit tracking with completion history, weighting and streaks
-- Weekly review and analytics views
-- Local notifications and reminders
-- Backup, restore, export and sharing flows
+On the onboarding screen, choose **Try Interactive Demo**. The app loads a realistic sample week with goals, deadlines, habit history, analytics and revision data so the main experience can be evaluated immediately.
 
-## Technical Highlights
+Demo mode is isolated from normal local data. If a local workspace already exists, Student Toolkit snapshots it before loading sample data and restores it when the demo is closed.
 
-- **React Native + Expo Router** for a cross-platform mobile application structure
-- **TypeScript** across application code
-- **React Context** for shared app-level state
-- **AsyncStorage** for local-first persistence across app restarts
-- **Expo Notifications** for reminder flows
-- **React Native Chart Kit** for visual progress reporting
-- Defensive backup / restore validation with rollback protection if a restore fails
-- Responsive product flows designed to remain useful without an account or internet connection
+## Product highlights
 
-## Quality & Verification
+- **Today command centre** — ranks the next three useful actions from habit progress and lower-scoring performance areas.
+- **Adaptive revision scheduler** — distributes study time using exam runway, available study days, intensity and per-subject confidence.
+- **Four performance areas** — academic, fitness, income/building and professional development.
+- **Habit system** — weighted difficulty, completion history, streaks and weekly reset.
+- **Weekly review and analytics** — rolling calendar windows, monthly insights and performance trends.
+- **Focus timer** — persistent session state and focus-history metrics.
+- **Local backup and restore** — validates imports, ignores unknown keys and rolls back if a restore write fails.
+- **Interactive demo data** — realistic relative dates so the sample remains useful whenever the project is opened.
+- **Responsive theming** — clean, dark and midnight dashboard modes.
+- **Exports and reminders** — PDF planner export, JSON backup and local notification flows.
 
-GitHub Actions runs the core static quality checks on pushes and pull requests:
+## Engineering decisions
+
+### Local-first state
+
+The app uses React Context for shared state and AsyncStorage for persistence. There is no production account service, payment flow or remote personal-data store in this portfolio build.
+
+Habit writes use synchronous refs before React state updates so rapid interactions persist the newest snapshot rather than a potentially stale deferred state value.
+
+### Recoverable data
+
+Backup restore is treated as a transaction:
+
+1. validate the backup envelope and recognised keys;
+2. validate nested JSON values;
+3. snapshot the current values;
+4. apply removals and writes;
+5. restore the previous snapshot if a write fails.
+
+### Date-aware analytics
+
+Analytics use actual local calendar windows rather than simply taking the last N array records. Duplicate records cannot inflate consistency and stale entries outside the requested date window are excluded.
+
+### Maintainable dashboard
+
+The dashboard is being decomposed into reusable presentation modules. The Today command centre and dashboard style system are now separate from the screen's orchestration logic, substantially reducing the size of the main route file.
+
+## Quality checks
+
+Run the same checks used by CI:
+
+```bash
+npm run check
+```
+
+This runs:
 
 ```bash
 npm run lint
 npm run typecheck
+npm test
 ```
 
-These checks catch lint regressions and TypeScript errors before changes reach the demo branch.
+The zero-dependency Node test suite covers:
 
-The project does not currently claim full automated end-to-end mobile test coverage. The most valuable future testing upgrade would be automated coverage around persistence, backup / restore and the main planner journeys.
+- revision-plan parsing, deadline handling and confidence weighting;
+- exact calendar-window analytics;
+- habit persistence across serialisation/restart and streak calculation;
+- invalid backup values, unknown-key filtering and restore rollback.
 
-## Running Locally
+GitHub Actions also verifies that the Expo web bundle can be exported successfully.
 
-### Prerequisites
+## Tech stack
 
-- Node.js 18+
-- npm
-- Expo-compatible iOS simulator, Android emulator, web browser or Expo Go
+| Area | Technology |
+| --- | --- |
+| App | React Native 0.81 + Expo 54 |
+| Navigation | Expo Router |
+| Language | TypeScript |
+| State | React Context |
+| Persistence | AsyncStorage |
+| Charts | React Native Chart Kit |
+| Notifications | Expo Notifications |
+| Export | Expo Print + Sharing |
+| Testing | Node test runner |
+| CI | GitHub Actions |
 
-### Install
+## Project structure
 
-```bash
-npm install
+```text
+app/
+  dashboard.tsx          screen orchestration and dashboard behavior
+  dashboard.styles.ts    extracted dashboard presentation styles
+  revision.tsx           adaptive revision scheduler
+  gym.tsx                fitness planner
+  hustle.tsx             build / income planner
+  cv.tsx                 professional profile planner
+
+components/
+  dashboard/
+    TodayCommandCenter.tsx
+  PerformanceGraph.tsx
+
+context/
+  HabitContext.tsx
+  PerformanceContext.tsx
+  ProfileContext.tsx
+  NotificationContext.tsx
+
+src/
+  screens/                analytics, habits and weekly review
+  utils/
+    backup.ts             device/file integration
+    backupCore.js         validated transactional restore core
+    demoData.ts           isolated portfolio demo state
+    dateMetrics.js        calendar-window analytics helpers
+    habitLogic.js         deterministic habit/streak logic
+    revisionPlanner.js    adaptive scheduling engine
+
+tests/                    zero-dependency regression tests
+docs/                     architecture, demo and QA documentation
 ```
 
-### Start
+## Architecture
 
-```bash
-npm start
-```
+See [docs/architecture.md](./docs/architecture.md) for the data flow, persistence boundaries and feature architecture.
 
-Useful variants:
+For a concise interview walkthrough, see [docs/demo-script.md](./docs/demo-script.md).
+
+For the recommended screenshots and short portfolio video, see [docs/portfolio-capture-guide.md](./docs/portfolio-capture-guide.md).
+
+## Running on other targets
 
 ```bash
 npm run android
@@ -73,42 +148,18 @@ npm run ios
 npm run web
 ```
 
-## Project Structure
+You can also start Expo directly:
 
-```text
-app/         Expo Router routes and screen entry points
-context/     app-wide state, profile, performance, habits, notifications and theme
-src/screens/ larger feature screens such as analytics, habits and weekly review
-src/utils/   persistence, backup, notification and review helpers
-components/  reusable UI and visualisation components
-docs/        demo, privacy, QA and release documentation
+```bash
+npm start
 ```
 
-## Product Scope
+## Portfolio scope
 
-All current user data is stored locally on-device. There is no production account service, payment flow or hosted backend in this portfolio version.
+The current build deliberately avoids fake production infrastructure. It does not claim hosted authentication, cloud sync, subscriptions or server-side analytics that are not implemented.
 
-That is intentional: the repository is designed to make the mobile architecture and UX easy for a recruiter or reviewer to inspect without needing external services or credentials.
+Natural production extensions would be optional authenticated sync, calendar integration, a formal reusable design system and full device-level end-to-end coverage.
 
-## Documentation
+## License / use
 
-Additional project material lives in [`docs/`](./docs), including:
-
-- demo walkthrough material
-- privacy and terms drafts
-- offline QA checks
-- release / store-readiness checklists
-
-## If Taken Further
-
-The next production-oriented upgrades would be:
-
-- authentication and optional cross-device sync
-- calendar integration and smarter reminders
-- stronger analytics and forecasting
-- a more formal reusable design system
-- automated end-to-end tests for critical flows
-
-## License / Use
-
-No license is currently included. The repository is published as portfolio source for review rather than as a reusable open-source package.
+No open-source licence is currently attached. The repository is published primarily for portfolio review.

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useThemedStyles, type AppThemeTokens } from "../context/theme";
 
-const LAST_UPDATED = "2026-02-19";
+const LAST_UPDATED = "2026-09-19";
 
 export default function PrivacyScreen() {
   const styles = useThemedStyles(createStyles);
@@ -45,8 +45,8 @@ export default function PrivacyScreen() {
       </Section>
 
       <Section title="8. Public policy URLs" styles={styles}>
-        Privacy Policy URL: https://github.com/PriceyLewis/StudentToolKit-OS/blob/main/docs/privacy-policy.md{"\n"}
-        Terms of Use URL: https://github.com/PriceyLewis/StudentToolKit-OS/blob/main/docs/terms-of-use.md
+        Privacy Policy URL: https://github.com/PriceyLewis/StudentToolKit-OS-Demo/blob/main/docs/privacy-policy.md{"\n"}
+        Terms of Use URL: https://github.com/PriceyLewis/StudentToolKit-OS-Demo/blob/main/docs/terms-of-use.md
       </Section>
     </ScrollView>
   );

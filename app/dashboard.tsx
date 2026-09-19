@@ -5,7 +5,6 @@ import {
   Alert,
   Animated,
   ScrollView,
-  StyleSheet,
   Linking,
   Switch,
   Text,
@@ -16,26 +15,34 @@ import {
 } from "react-native";
 import { ProgressChart } from "react-native-chart-kit";
 import PerformanceGraph from "../components/PerformanceGraph";
+import TodayCommandCenter, { type TodayPriority } from "../components/dashboard/TodayCommandCenter";
 import { useHabits } from "../context/HabitContext";
 import { useNotificationPrefs } from "../context/NotificationContext";
 import { PerformanceContext } from "../context/PerformanceContext";
 import { ProfileContext } from "../context/ProfileContext";
-import { useTheme, useThemedStyles, type AppThemeTokens } from "../context/theme";
+import { useTheme, useThemedStyles } from "../context/theme";
+import { createStyles } from "./dashboard.styles";
 import {
   createLocalBackupFile,
   pickBackupFile,
   restoreBackupFromFile,
 } from "../src/utils/backup";
 import { resetLocalData } from "../src/utils/resetAppData";
+import {
+  exitPortfolioDemo,
+  isPortfolioDemoActive,
+  resetPortfolioDemo,
+  seedPortfolioDemo,
+} from "../src/utils/demoData";
 import { getJSON, setJSON } from "../src/utils/storage";
 
 const BADGE_TOAST_DURATION_MS = 1800;
 const FOCUS_TIMER_STORAGE_KEY = "focusTimerState";
 const DEFAULT_FOCUS_MINUTES = 25;
 const MAX_FOCUS_MINUTES = 180;
-const POLICY_LAST_UPDATED = "2026-02-19";
-const PRIVACY_POLICY_URL = "https://github.com/PriceyLewis/StudentToolKit-OS/blob/main/docs/privacy-policy.md";
-const TERMS_OF_USE_URL = "https://github.com/PriceyLewis/StudentToolKit-OS/blob/main/docs/terms-of-use.md";
+const POLICY_LAST_UPDATED = "2026-09-19";
+const PRIVACY_POLICY_URL = "https://github.com/PriceyLewis/StudentToolKit-OS-Demo/blob/main/docs/privacy-policy.md";
+const TERMS_OF_USE_URL = "https://github.com/PriceyLewis/StudentToolKit-OS-Demo/blob/main/docs/terms-of-use.md";
 type CoachingPreset = "strict" | "balanced" | "aggressive";
 type CoachingPresetConfig = {
   fitnessDisciplineHighThreshold: number;
@@ -199,7 +206,7 @@ export default function DashboardScreen() {
     resetPerformanceData,
     rehydratePerformanceData,
   } = useContext(PerformanceContext);
-  const { name, resetProfile, rehydrateProfile } = useContext(ProfileContext);
+  const { name, primaryFocus, resetProfile, rehydrateProfile } = useContext(ProfileContext);
   const {
     activeHabits,
     habitCompletion,
@@ -261,7 +268,14 @@ export default function DashboardScreen() {
   const [focusCompletedSessions, setFocusCompletedSessions] = useState(0);
   const [focusSessionHistory, setFocusSessionHistory] = useState<FocusSessionRecord[]>([]);
   const [focusTimerHydrated, setFocusTimerHydrated] = useState(false);
+  const [demoModeActive, setDemoModeActive] = useState(false);
   const coachingConfig = COACHING_PRESET_CONFIG[coachingPreset];
+
+  useEffect(() => {
+    isPortfolioDemoActive()
+      .then(setDemoModeActive)
+      .catch(() => setDemoModeActive(false));
+  }, []);
 
   const cards = [
     {
@@ -673,6 +687,76 @@ export default function DashboardScreen() {
   const nearestDeadline = deadlineCountdowns
     .filter((item) => item.daysRemaining !== null)
     .sort((a, b) => (a.daysRemaining ?? 9999) - (b.daysRemaining ?? 9999))[0];
+
+  const todayPriorities = useMemo<TodayPriority[]>(() => {
+    const areas = [
+      {
+        id: "academic",
+        label: "Strengthen academic performance",
+        detail: "Open the adaptive revision scheduler and protect focused study time.",
+        href: "/revision",
+        score: academicScore,
+      },
+      {
+        id: "fitness",
+        label: "Protect physical consistency",
+        detail: "Log training and keep your weekly conditioning target moving.",
+        href: "/gym",
+        score: fitnessScore,
+      },
+      {
+        id: "hustle",
+        label: "Move your build forward",
+        detail: "Schedule one concrete income or portfolio-building action.",
+        href: "/hustle",
+        score: hustleScore,
+      },
+      {
+        id: "career",
+        label: "Advance your professional profile",
+        detail: "Improve your CV, evidence, or next career action.",
+        href: "/cv",
+        score: careerScore,
+      },
+    ].sort((a, b) => a.score - b.score);
+
+    const priorities: TodayPriority[] = [];
+
+    if (activeHabits.length > 0 && doneCount < activeHabits.length) {
+      priorities.push({
+        id: "habits",
+        label: "Finish today's habits",
+        detail: `${activeHabits.length - doneCount} habit${
+          activeHabits.length - doneCount === 1 ? "" : "s"
+        } remaining. Clear these before the day gets away from you.`,
+        href: "/habits",
+        meta: `${doneCount}/${activeHabits.length}`,
+      });
+    }
+
+    areas.forEach((area) => {
+      if (priorities.length >= 3) {
+        return;
+      }
+      priorities.push({
+        id: area.id,
+        label: area.label,
+        detail: area.detail,
+        href: area.href,
+        meta: `${area.score}/100`,
+      });
+    });
+
+    return priorities.slice(0, 3);
+  }, [
+    academicScore,
+    activeHabits.length,
+    careerScore,
+    doneCount,
+    fitnessScore,
+    hustleScore,
+  ]);
+
   const habitStreakById = useMemo(() => {
     const recentKeys = getRecentDateKeys(365);
     const streaks: Record<string, number> = {};
@@ -995,40 +1079,36 @@ export default function DashboardScreen() {
     });
   }, [badges, enqueueBadgeToast, unlockedBadgeIds]);
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const stored = await getJSON<Partial<FocusTimerState> | null>(FOCUS_TIMER_STORAGE_KEY, null);
-      if (!mounted) {
-        return;
-      }
+  const rehydrateFocusTimer = useCallback(async () => {
+    const stored = await getJSON<Partial<FocusTimerState> | null>(FOCUS_TIMER_STORAGE_KEY, null);
+    const selectedMinutes = clampFocusMinutes(Number(stored?.selectedMinutes ?? DEFAULT_FOCUS_MINUTES));
+    const remainingSeconds = Math.max(
+      0,
+      Math.round(Number(stored?.remainingSeconds ?? selectedMinutes * 60))
+    );
+    const sessionHistory = Array.isArray(stored?.sessionHistory)
+      ? (stored?.sessionHistory as FocusSessionRecord[])
+          .filter((entry) => typeof entry?.date === "string" && Number.isFinite(Number(entry?.minutes)))
+          .map((entry) => ({
+            date: entry.date,
+            minutes: clampFocusMinutes(Number(entry.minutes)),
+          }))
+      : [];
 
-      const selectedMinutes = clampFocusMinutes(Number(stored?.selectedMinutes ?? DEFAULT_FOCUS_MINUTES));
-      const remainingSeconds = Math.max(
-        0,
-        Math.round(Number(stored?.remainingSeconds ?? selectedMinutes * 60))
-      );
-      const sessionHistory = Array.isArray(stored?.sessionHistory)
-        ? (stored?.sessionHistory as FocusSessionRecord[])
-            .filter((entry) => typeof entry?.date === "string" && Number.isFinite(Number(entry?.minutes)))
-            .map((entry) => ({
-              date: entry.date,
-              minutes: clampFocusMinutes(Number(entry.minutes)),
-            }))
-        : [];
-
-      setFocusSelectedMinutes(selectedMinutes);
-      setFocusInputValue(String(selectedMinutes));
-      setFocusRemainingSeconds(remainingSeconds || selectedMinutes * 60);
-      setFocusCompletedSessions(Math.max(0, Math.round(Number(stored?.completedSessions ?? 0))));
-      setFocusSessionHistory(sessionHistory);
-      setFocusTimerHydrated(true);
-    })();
-
-    return () => {
-      mounted = false;
-    };
+    setFocusIsRunning(false);
+    setFocusSelectedMinutes(selectedMinutes);
+    setFocusInputValue(String(selectedMinutes));
+    setFocusRemainingSeconds(remainingSeconds || selectedMinutes * 60);
+    setFocusCompletedSessions(Math.max(0, Math.round(Number(stored?.completedSessions ?? 0))));
+    setFocusSessionHistory(sessionHistory);
+    setFocusTimerHydrated(true);
   }, []);
+
+  useEffect(() => {
+    rehydrateFocusTimer().catch(() => {
+      setFocusTimerHydrated(true);
+    });
+  }, [rehydrateFocusTimer]);
 
   useEffect(() => {
     if (!focusTimerHydrated) {
@@ -1113,6 +1193,10 @@ export default function DashboardScreen() {
 
   const runReset = useCallback(
     async () => {
+      if (demoModeActive) {
+        await exitPortfolioDemo();
+        setDemoModeActive(false);
+      }
       await resetLocalData();
       await resetNotificationPrefs();
       await resetHabitsData();
@@ -1122,6 +1206,7 @@ export default function DashboardScreen() {
       router.replace("/onboarding");
     },
     [
+      demoModeActive,
       resetHabitsData,
       resetNotificationPrefs,
       resetPerformanceData,
@@ -1152,13 +1237,49 @@ export default function DashboardScreen() {
       rehydratePerformanceData(),
       rehydrateHabitsData(),
       rehydrateNotificationPrefs(),
+      rehydrateFocusTimer(),
     ]);
   }, [
     rehydrateHabitsData,
+    rehydrateFocusTimer,
     rehydrateNotificationPrefs,
     rehydratePerformanceData,
     rehydrateProfile,
   ]);
+
+  const handleStartPortfolioDemo = useCallback(async () => {
+    try {
+      await seedPortfolioDemo();
+      await rehydrateAllData();
+      setDemoModeActive(true);
+      Alert.alert("Demo loaded", "A realistic sample week is now ready to explore.");
+    } catch {
+      Alert.alert("Demo failed", "Could not load the portfolio sample data.");
+    }
+  }, [rehydrateAllData]);
+
+  const handleResetPortfolioDemo = useCallback(async () => {
+    try {
+      await resetPortfolioDemo();
+      await rehydrateAllData();
+      setDemoModeActive(true);
+      Alert.alert("Demo reset", "The sample goals, habits and history have been restored.");
+    } catch {
+      Alert.alert("Demo reset failed", "Could not reload the portfolio sample data.");
+    }
+  }, [rehydrateAllData]);
+
+  const handleExitPortfolioDemo = useCallback(async () => {
+    try {
+      await exitPortfolioDemo();
+      await rehydrateAllData();
+      setDemoModeActive(false);
+      router.replace("/");
+      Alert.alert("Demo closed", "Your previous local workspace has been restored.");
+    } catch {
+      Alert.alert("Could not exit demo", "Your previous local data has not been changed.");
+    }
+  }, [rehydrateAllData, router]);
 
   const handleExportBackup = useCallback(async () => {
     try {
@@ -1182,6 +1303,10 @@ export default function DashboardScreen() {
   const performRestoreBackup = useCallback(async () => {
     try {
       const file = await pickBackupFile();
+      if (demoModeActive) {
+        await exitPortfolioDemo();
+        setDemoModeActive(false);
+      }
       const result = await restoreBackupFromFile(file);
       await rehydrateAllData();
       Alert.alert(
@@ -1195,7 +1320,7 @@ export default function DashboardScreen() {
       }
       Alert.alert("Restore failed", "Could not restore data from this backup file.");
     }
-  }, [rehydrateAllData]);
+  }, [demoModeActive, rehydrateAllData]);
 
   const confirmRestoreBackup = useCallback(() => {
     Alert.alert("Restore local backup?", "Current local data will be replaced.", [
@@ -1489,6 +1614,16 @@ export default function DashboardScreen() {
             <Text style={styles.kpiValue}>{streakDays}d</Text>
           </View>
         </View>
+
+        <TodayCommandCenter
+          primaryFocus={primaryFocus}
+          priorities={todayPriorities}
+          habitsDone={doneCount}
+          habitsTotal={activeHabits.length}
+          nearestDeadlineLabel={nearestDeadline?.label ?? null}
+          nearestDeadlineDays={nearestDeadline?.daysRemaining ?? null}
+          onOpen={(href) => router.push(href as any)}
+        />
 
         <View style={[styles.topActionsRow, isCompact ? styles.topActionsRowCompact : null]}>
           <TouchableOpacity
@@ -2043,6 +2178,41 @@ export default function DashboardScreen() {
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Settings & Info</Text>
           <Text style={styles.infoText}>Last updated: {POLICY_LAST_UPDATED}</Text>
+          {demoModeActive ? (
+            <>
+              <Text style={styles.infoText}>
+                Interactive portfolio demo is active. Sample data is isolated from the workspace that was on this device before the demo started.
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.linkButton}
+                onPress={() => {
+                  handleResetPortfolioDemo().catch(() => {});
+                }}
+              >
+                <Text style={styles.linkButtonText}>Reset demo sample data</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.resetButton}
+                onPress={() => {
+                  handleExitPortfolioDemo().catch(() => {});
+                }}
+              >
+                <Text style={styles.resetButtonText}>Exit demo & restore previous data</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.linkButton}
+              onPress={() => {
+                handleStartPortfolioDemo().catch(() => {});
+              }}
+            >
+              <Text style={styles.linkButtonText}>Load interactive portfolio demo</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             activeOpacity={0.8}
             style={styles.linkButton}
@@ -2135,736 +2305,3 @@ export default function DashboardScreen() {
     </ScrollView>
   );
 }
-
-const createStyles = ({ COLORS, RADIUS, SPACING }: AppThemeTokens) => StyleSheet.create({
-  container: {
-    padding: SPACING.xxl,
-    backgroundColor: COLORS.backgroundAlt,
-    flexGrow: 1,
-  },
-  containerCompact: {
-    padding: SPACING.lg,
-  },
-  toastContainer: {
-    alignSelf: "center",
-    backgroundColor: COLORS.textPrimary,
-    borderRadius: RADIUS.button,
-    paddingHorizontal: SPACING.xxl,
-    paddingVertical: SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  toastText: {
-    color: COLORS.white,
-    fontWeight: "700",
-    fontSize: 12,
-  },
-  habitCelebrateBanner: {
-    alignSelf: "center",
-    backgroundColor: COLORS.successSoft,
-    borderColor: COLORS.success,
-    borderWidth: 1,
-    borderRadius: RADIUS.button,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    marginBottom: SPACING.md,
-  },
-  habitCelebrateText: {
-    color: COLORS.success,
-    fontWeight: "700",
-    fontSize: 12,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "800",
-    letterSpacing: -0.4,
-    color: COLORS.textPrimary,
-  },
-  titleCompact: {
-    fontSize: 28,
-  },
-  welcomeText: {
-    color: COLORS.textMuted,
-    marginBottom: SPACING.xs,
-  },
-  heroCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.xxl,
-    shadowColor: COLORS.black,
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
-  },
-  heroCardCompact: {
-    padding: SPACING.lg,
-  },
-  heroEyebrow: {
-    alignSelf: "flex-start",
-    marginBottom: SPACING.md,
-    color: COLORS.primary,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  heroHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: SPACING.md,
-  },
-  scoreRingWrap: {
-    width: 126,
-    height: 126,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scoreRingChart: {
-    borderRadius: 999,
-  },
-  scoreRingCenter: {
-    position: "absolute",
-    width: 74,
-    height: 74,
-    borderRadius: 37,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  scoreRingValue: {
-    color: COLORS.textPrimary,
-    fontWeight: "800",
-    fontSize: 22,
-    lineHeight: 24,
-  },
-  scoreRingLabel: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  subtitle: {
-    marginTop: SPACING.sm,
-    color: COLORS.textMuted,
-    marginBottom: SPACING.md,
-  },
-  progressTrack: {
-    marginTop: SPACING.md,
-    height: 8,
-    borderRadius: 999,
-    overflow: "hidden",
-    backgroundColor: COLORS.border,
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 999,
-    backgroundColor: COLORS.primary,
-  },
-  progressText: {
-    marginTop: SPACING.sm,
-    color: COLORS.textMuted,
-    fontSize: 12,
-  },
-  positiveDeltaText: {
-    marginTop: SPACING.xs,
-    color: COLORS.success,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  momentumBanner: {
-    marginTop: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.background,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-  },
-  momentumBannerPositive: {
-    borderColor: COLORS.success,
-    backgroundColor: COLORS.successSoft,
-  },
-  momentumBannerText: {
-    color: COLORS.textPrimary,
-    fontWeight: "700",
-    fontSize: 12,
-  },
-  heroSnapshotRow: {
-    flexDirection: "row",
-    gap: SPACING.sm,
-    marginTop: SPACING.md,
-  },
-  heroSnapshotCard: {
-    flex: 1,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surfaceMuted,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
-  },
-  heroSnapshotLabel: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  heroSnapshotValue: {
-    color: COLORS.textPrimary,
-    fontSize: 22,
-    fontWeight: "800",
-  },
-  kpiRow: {
-    flexDirection: "row",
-    gap: SPACING.sm,
-    marginTop: SPACING.md,
-    marginBottom: SPACING.xl,
-  },
-  kpiRowCompact: {
-    gap: SPACING.xs,
-  },
-  kpiCard: {
-    flex: 1,
-    backgroundColor: COLORS.surfaceMuted,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.sm,
-    alignItems: "center",
-  },
-  kpiLabel: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    marginBottom: 2,
-  },
-  kpiValue: {
-    color: COLORS.textPrimary,
-    fontWeight: "700",
-    fontSize: 16,
-  },
-  topActionsRow: {
-    flexDirection: "row",
-    gap: SPACING.md,
-    marginBottom: SPACING.xxl,
-  },
-  topActionsRowCompact: {
-    flexDirection: "column",
-    gap: SPACING.sm,
-    marginBottom: SPACING.xl,
-  },
-  topActionButton: {
-    flex: 1,
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.card,
-    paddingVertical: SPACING.lg,
-    paddingHorizontal: SPACING.lg,
-    shadowColor: COLORS.black,
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  topActionButtonCompact: {
-    width: "100%",
-  },
-  topActionText: {
-    color: COLORS.textPrimary,
-    fontWeight: "700",
-    fontSize: 18,
-    marginTop: 2,
-  },
-  topActionKicker: {
-    color: COLORS.primary,
-    fontWeight: "800",
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-  },
-  topActionSubtext: {
-    marginTop: SPACING.xs,
-    color: COLORS.textMuted,
-    lineHeight: 18,
-    fontSize: 12,
-  },
-  weeklySummaryCard: {
-    marginBottom: SPACING.xxl,
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.xxl,
-    shadowColor: COLORS.black,
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  weeklySummaryCardCompact: {
-    padding: SPACING.lg,
-    marginBottom: SPACING.xl,
-  },
-  weeklySummaryTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: SPACING.sm,
-  },
-  weeklySummaryBody: {
-    color: COLORS.textSecondary,
-    lineHeight: 20,
-  },
-  coachingPresetRow: {
-    flexDirection: "row",
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
-  },
-  coachingPresetButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    paddingVertical: SPACING.sm,
-    alignItems: "center",
-    backgroundColor: COLORS.background,
-  },
-  coachingPresetButtonActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primarySoft,
-  },
-  coachingPresetButtonText: {
-    color: COLORS.textMuted,
-    fontWeight: "700",
-    fontSize: 12,
-  },
-  coachingPresetButtonTextActive: {
-    color: COLORS.primary,
-  },
-  coachingList: {
-    gap: SPACING.sm,
-  },
-  coachingItem: {
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surfaceMuted,
-    padding: SPACING.md,
-    gap: SPACING.xs,
-  },
-  coachingItemTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  coachingItemBody: {
-    color: COLORS.textSecondary,
-    lineHeight: 19,
-    fontSize: 13,
-  },
-  weeklySummaryButton: {
-    marginTop: SPACING.md,
-    alignSelf: "flex-start",
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.primarySoft,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
-  },
-  weeklySummaryButtonText: {
-    color: COLORS.primary,
-    fontWeight: "700",
-  },
-  focusTimerClock: {
-    color: COLORS.textPrimary,
-    fontWeight: "800",
-    fontSize: 30,
-    letterSpacing: 1,
-  },
-  focusProgressTrack: {
-    height: 8,
-    borderRadius: 999,
-    overflow: "hidden",
-    backgroundColor: COLORS.border,
-    marginTop: SPACING.xs,
-  },
-  focusProgressFill: {
-    height: "100%",
-    backgroundColor: COLORS.primary,
-    borderRadius: 999,
-  },
-  focusControlsRow: {
-    marginTop: SPACING.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-    flexWrap: "wrap",
-  },
-  focusInput: {
-    minWidth: 72,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.background,
-    color: COLORS.textPrimary,
-    borderRadius: RADIUS.md,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    fontWeight: "700",
-  },
-  focusPrimaryButton: {
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
-  },
-  focusPrimaryButtonText: {
-    color: COLORS.white,
-    fontWeight: "700",
-  },
-  focusSecondaryButton: {
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.background,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-  },
-  focusSecondaryButtonText: {
-    color: COLORS.textPrimary,
-    fontWeight: "700",
-    fontSize: 12,
-  },
-  monthlyStatsGrid: {
-    gap: SPACING.sm,
-  },
-  monthlyStatItem: {
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surfaceMuted,
-    padding: SPACING.md,
-  },
-  improvementUp: {
-    color: COLORS.success,
-  },
-  improvementDown: {
-    color: COLORS.danger,
-  },
-  grid: {
-    gap: SPACING.lg,
-  },
-  blockHeading: {
-    color: COLORS.textSecondary,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    fontSize: 12,
-    letterSpacing: 0.8,
-  },
-  card: {
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.card,
-    padding: SPACING.xxlPlus,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: COLORS.black,
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  cardShell: {
-    borderRadius: RADIUS.card,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  scoreRow: {
-    marginTop: SPACING.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  cardScore: {
-    fontSize: 26,
-    fontWeight: "700",
-  },
-  trendText: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  cardTarget: {
-    marginTop: SPACING.xs,
-    color: COLORS.textMuted,
-  },
-  cardUpdated: {
-    marginTop: SPACING.xs,
-    color: COLORS.textSubtle,
-    fontSize: 12,
-  },
-  sectionCard: {
-    marginTop: SPACING.xxl,
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.card,
-    padding: SPACING.xxl,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: COLORS.black,
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  analyticsBody: {
-    marginTop: SPACING.md,
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: SPACING.sm,
-    gap: SPACING.md,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
-  },
-  sectionMeta: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-  },
-  badgeGrid: {
-    gap: SPACING.sm,
-  },
-  emptyState: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.card,
-    backgroundColor: COLORS.surfaceMuted,
-    padding: SPACING.lg,
-    marginBottom: SPACING.sm,
-  },
-  emptyStateCompact: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceMuted,
-    padding: SPACING.md,
-  },
-  emptyStateTitle: {
-    color: COLORS.textPrimary,
-    fontWeight: "700",
-    marginBottom: SPACING.xs,
-  },
-  emptyStateBody: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  emptyStateButton: {
-    marginTop: SPACING.md,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
-    paddingVertical: SPACING.sm,
-    alignItems: "center",
-  },
-  emptyStateButtonText: {
-    color: COLORS.white,
-    fontWeight: "700",
-  },
-  analyticsPreviewCards: {
-    marginTop: SPACING.md,
-    gap: SPACING.sm,
-  },
-  previewCard: {
-    backgroundColor: COLORS.background,
-    borderRadius: RADIUS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.lg,
-    gap: SPACING.xs,
-    minHeight: 72,
-    justifyContent: "center",
-  },
-  previewTitle: {
-    color: COLORS.textPrimary,
-    fontWeight: "700",
-  },
-  previewBody: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  badgeCard: {
-    borderRadius: RADIUS.card,
-    borderWidth: 1,
-    padding: SPACING.lg,
-  },
-  badgeUnlocked: {
-    borderColor: COLORS.success,
-    backgroundColor: COLORS.successSoft,
-  },
-  badgeLocked: {
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.background,
-  },
-  badgeTitle: {
-    fontWeight: "700",
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
-  },
-  badgeTitleUnlocked: {
-    color: COLORS.success,
-  },
-  badgeDetail: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-  },
-  habitSummary: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    marginBottom: SPACING.md,
-  },
-  habitList: {
-    gap: SPACING.sm,
-  },
-  weekResetButton: {
-    marginTop: SPACING.md,
-    alignSelf: "flex-start",
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    backgroundColor: COLORS.card,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
-  },
-  weekResetButtonText: {
-    color: COLORS.danger,
-    fontWeight: "700",
-  },
-  toggleRow: {
-    marginTop: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: SPACING.md,
-  },
-  toggleLabel: {
-    flex: 1,
-    color: COLORS.textPrimary,
-    fontWeight: "600",
-  },
-  habitItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    borderRadius: RADIUS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.lg,
-    backgroundColor: COLORS.background,
-  },
-  habitItemShell: {
-    borderRadius: RADIUS.card,
-  },
-  habitChecked: {
-    borderColor: COLORS.success,
-    backgroundColor: COLORS.successSoft,
-  },
-  habitCheck: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: COLORS.textSubtle,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.white,
-  },
-  habitCheckActive: {
-    borderColor: COLORS.success,
-    backgroundColor: COLORS.success,
-  },
-  habitCheckMark: {
-    color: COLORS.white,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  habitLabel: {
-    color: COLORS.textPrimary,
-    fontWeight: "600",
-  },
-  habitTextBlock: {
-    flex: 1,
-  },
-  habitStreakText: {
-    marginTop: 2,
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  infoText: {
-    marginTop: SPACING.sm,
-    color: COLORS.textSecondary,
-    lineHeight: 20,
-  },
-  linkButton: {
-    marginTop: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.md,
-    backgroundColor: COLORS.background,
-  },
-  linkButtonText: {
-    color: COLORS.textPrimary,
-    fontWeight: "600",
-  },
-  resetButton: {
-    marginTop: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    padding: SPACING.md,
-    backgroundColor: COLORS.card,
-  },
-  resetButtonText: {
-    color: COLORS.danger,
-    fontWeight: "700",
-  },
-  button: {
-    marginTop: SPACING.xxl,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
-    padding: SPACING.input,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontWeight: "600",
-  },
-  secondaryButton: {
-    marginTop: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    padding: SPACING.input,
-    alignItems: "center",
-    backgroundColor: COLORS.card,
-  },
-  secondaryButtonText: {
-    color: COLORS.primary,
-    fontWeight: "600",
-  },
-});

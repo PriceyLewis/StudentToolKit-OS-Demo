@@ -1,6 +1,6 @@
 # Terms of Use
 
-Last updated: 2026-02-19
+Last updated: 2026-09-19
 
 ## Purpose
 This app is for personal planning, tracking, and goal setting.

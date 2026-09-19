@@ -32,3 +32,9 @@ jobs:
 
       - name: Type check
         run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Expo web export
+        run: npx expo export --platform web --output-dir dist

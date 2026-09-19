@@ -1,5 +1,10 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { getJSON, setJSON } from "../src/utils/storage";
+import {
+  calculateHabitStreak,
+  getLocalDateKey,
+  toggleHabitCompletion,
+} from "../src/utils/habitLogic.js";
 
 export type HabitCategory = "academic" | "fitness" | "hustle" | "career";
 export type HabitDifficulty = "easy" | "medium" | "hard";
@@ -66,13 +71,6 @@ const HabitContext = createContext<HabitContextType>({
   rehydrateHabitsData: async () => {},
 });
 
-const getLocalDateKey = (date: Date) => {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
 const makeId = () => Math.random().toString(36).slice(2, 10);
 
 const difficultyWeight: Record<HabitDifficulty, number> = {
@@ -107,35 +105,12 @@ const getStartOfCurrentWeek = () => {
   return now;
 };
 
-const calculateStreak = (habits: Habit[], completion: HabitCompletion, fromDate: Date) => {
-  const activeHabits = habits.filter((habit) => habit.active);
-  if (activeHabits.length === 0) {
-    return 0;
-  }
-
-  let streak = 0;
-  const cursor = new Date(fromDate);
-
-  for (let i = 0; i < 365; i += 1) {
-    const key = getLocalDateKey(cursor);
-    const day = completion[key] ?? {};
-    const allDone = activeHabits.every((habit) => !!day[habit.id]);
-
-    if (!allDone) {
-      break;
-    }
-
-    streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-
-  return streak;
-};
-
 export const HabitProvider = ({ children }: { children: React.ReactNode }) => {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [habitCompletion, setHabitCompletion] = useState<HabitCompletion>({});
   const [isHydrated, setIsHydrated] = useState(false);
+  const habitsRef = useRef<Habit[]>([]);
+  const habitCompletionRef = useRef<HabitCompletion>({});
 
   const rehydrateHabitsData = useCallback(async () => {
     setIsHydrated(false);
@@ -143,9 +118,11 @@ export const HabitProvider = ({ children }: { children: React.ReactNode }) => {
       const storedHabits = await getJSON<Habit[] | null>(HABITS_STORAGE_KEY, null);
       if (storedHabits && Array.isArray(storedHabits)) {
         const normalized = storedHabits.map((habit) => normalizeHabit(habit));
+        habitsRef.current = normalized;
         setHabits(normalized);
         await setJSON(HABITS_STORAGE_KEY, normalized);
       } else {
+        habitsRef.current = defaultHabits;
         setHabits(defaultHabits);
         await setJSON(HABITS_STORAGE_KEY, defaultHabits);
       }
@@ -155,12 +132,15 @@ export const HabitProvider = ({ children }: { children: React.ReactNode }) => {
         null
       );
       if (!parsed) {
+        habitCompletionRef.current = {};
+        habitCompletionRef.current = {};
         setHabitCompletion({});
         await setJSON(HABIT_COMPLETION_STORAGE_KEY, {});
       } else if (Array.isArray(parsed)) {
         setHabitCompletion({});
         await setJSON(HABIT_COMPLETION_STORAGE_KEY, {});
       } else {
+        habitCompletionRef.current = parsed as HabitCompletion;
         setHabitCompletion(parsed as HabitCompletion);
       }
     } catch (error) {
@@ -176,15 +156,9 @@ export const HabitProvider = ({ children }: { children: React.ReactNode }) => {
 
   const toggleHabit = async (habitId: string) => {
     const today = getLocalDateKey(new Date());
-    let next: HabitCompletion = {};
-    setHabitCompletion((current) => {
-      const snapshot = { ...(current || {}) };
-      const day = { ...(snapshot[today] || {}) };
-      day[habitId] = !day[habitId];
-      snapshot[today] = day;
-      next = snapshot;
-      return snapshot;
-    });
+    const next = toggleHabitCompletion(habitCompletionRef.current, today, habitId) as HabitCompletion;
+    habitCompletionRef.current = next;
+    setHabitCompletion(next);
     await setJSON(HABIT_COMPLETION_STORAGE_KEY, next);
   };
 
@@ -197,54 +171,49 @@ export const HabitProvider = ({ children }: { children: React.ReactNode }) => {
       active: true,
     };
 
-    let updated: Habit[] = [];
-    setHabits((current) => {
-      updated = [...current, newHabit];
-      return updated;
-    });
+    const updated = [...habitsRef.current, newHabit];
+    habitsRef.current = updated;
+    setHabits(updated);
     await setJSON(HABITS_STORAGE_KEY, updated);
   };
 
   const updateHabit = async (id: string, patch: Partial<Habit>) => {
-    let updated: Habit[] = [];
-    setHabits((current) => {
-      updated = current.map((habit) => (habit.id === id ? { ...habit, ...patch } : habit));
-      return updated;
-    });
+    const updated = habitsRef.current.map((habit) =>
+      habit.id === id ? normalizeHabit({ ...habit, ...patch }) : habit
+    );
+    habitsRef.current = updated;
+    setHabits(updated);
     await setJSON(HABITS_STORAGE_KEY, updated);
   };
 
   const removeHabit = async (id: string) => {
-    let updated: Habit[] = [];
-    setHabits((current) => {
-      updated = current.map((habit) =>
-        habit.id === id ? { ...habit, active: false } : habit
-      );
-      return updated;
-    });
+    const updated = habitsRef.current.map((habit) =>
+      habit.id === id ? { ...habit, active: false } : habit
+    );
+    habitsRef.current = updated;
+    setHabits(updated);
     await setJSON(HABITS_STORAGE_KEY, updated);
   };
 
   const resetCurrentWeekHabits = useCallback(async () => {
     const weekStartKey = getLocalDateKey(getStartOfCurrentWeek());
     const todayKey = getLocalDateKey(new Date());
-    let next: HabitCompletion = {};
+    const next: HabitCompletion = { ...(habitCompletionRef.current || {}) };
 
-    setHabitCompletion((current) => {
-      const snapshot = { ...(current || {}) };
-      Object.keys(snapshot).forEach((dateKey) => {
-        if (dateKey >= weekStartKey && dateKey <= todayKey) {
-          delete snapshot[dateKey];
-        }
-      });
-      next = snapshot;
-      return snapshot;
+    Object.keys(next).forEach((dateKey) => {
+      if (dateKey >= weekStartKey && dateKey <= todayKey) {
+        delete next[dateKey];
+      }
     });
 
+    habitCompletionRef.current = next;
+    setHabitCompletion(next);
     await setJSON(HABIT_COMPLETION_STORAGE_KEY, next);
   }, []);
 
   const resetHabitsData = useCallback(async () => {
+    habitsRef.current = defaultHabits;
+    habitCompletionRef.current = {};
     setHabits(defaultHabits);
     setHabitCompletion({});
     await setJSON(HABITS_STORAGE_KEY, defaultHabits);
@@ -268,7 +237,7 @@ export const HabitProvider = ({ children }: { children: React.ReactNode }) => {
       0
     );
     const weightedCompletionPct = weightedTotal ? Math.round((weightedDone / weightedTotal) * 100) : 0;
-    const streakDays = calculateStreak(habits, habitCompletion, new Date());
+    const streakDays = calculateHabitStreak(habits, habitCompletion, new Date());
 
     return {
       habits,
