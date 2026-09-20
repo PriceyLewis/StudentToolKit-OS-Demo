@@ -101,7 +101,7 @@ jobs:
             for (const [buttonText, destinationText] of routes) {
               const locator = page.getByText(buttonText, { exact: true }).last();
               await locator.click();
-              await page.getByText(destinationText, { exact: true }).waitFor({ timeout: 30000 });
+              await page.getByText(destinationText, { exact: true }).last().waitFor({ timeout: 30000 });
               await page.goBack({ waitUntil: 'domcontentloaded' });
               await page.getByText('Academic Performance', { exact: true }).waitFor({ timeout: 30000 });
             }
