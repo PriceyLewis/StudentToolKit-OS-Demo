@@ -107,12 +107,14 @@ jobs:
             }
 
             await page.getByText('Open Weekly Review', { exact: true }).click();
-            await page.getByText('Weekly Review', { exact: true }).first().waitFor({ timeout: 30000 });
+            await page.waitForURL(/\/weekly-review\/?$/, { timeout: 30000 });
+            await page.getByText('Last 7 days compared to the previous 7 days', { exact: true }).waitFor({ timeout: 30000 });
             await page.goBack({ waitUntil: 'domcontentloaded' });
             await page.getByText('Academic Performance', { exact: true }).waitFor();
 
             await page.getByText('Analytics', { exact: true }).first().click();
-            await page.getByText('Analytics', { exact: true }).first().waitFor({ timeout: 30000 });
+            await page.waitForURL(/\/analytics\/?$/, { timeout: 30000 });
+            await page.getByText('Trends and consistency', { exact: true }).waitFor({ timeout: 30000 });
             assert(/Trends and consistency/i.test(await page.locator('body').innerText()), 'Analytics content missing');
             await page.goBack({ waitUntil: 'domcontentloaded' });
             await page.getByText('Academic Performance', { exact: true }).waitFor();
