@@ -125,9 +125,56 @@ jobs:
 
             assert(runtimeErrors.length === 0, 'Browser runtime errors: ' + runtimeErrors.join(' | '));
             await page.screenshot({ path: 'student-toolkit-browser-audit.png', fullPage: true });
+            await context.close();
+
+            // Mobile visual + route regression against the same production export.
+            const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+            const mobile = await mobileContext.newPage();
+            const mobileErrors = [];
+            mobile.on('pageerror', error => mobileErrors.push(error.message));
+            mobile.on('console', msg => {
+              if (msg.type() === 'error' && !/favicon|ResizeObserver loop/i.test(msg.text())) {
+                mobileErrors.push(msg.text());
+              }
+            });
+            mobile.on('dialog', dialog => dialog.accept());
+
+            await mobile.goto(base, { waitUntil: 'networkidle' });
+            await mobile.getByText('Try Interactive Demo', { exact: true }).click();
+            await mobile.getByText('Academic Performance', { exact: true }).waitFor({ timeout: 30000 });
+
+            let mobileLayout = await mobile.evaluate(() => ({
+              viewport: innerWidth,
+              documentWidth: document.documentElement.scrollWidth,
+            }));
+            assert(
+              mobileLayout.documentWidth <= mobileLayout.viewport + 2,
+              'Student Toolkit dashboard overflows mobile viewport: ' + JSON.stringify(mobileLayout)
+            );
+
+            await mobile.getByText('Academic Performance', { exact: true }).last().click();
+            await mobile.waitForURL(/\/revision\/?$/, { timeout: 30000 });
+            await mobile.getByText('Adaptive Revision Scheduler', { exact: true }).waitFor({ timeout: 30000 });
+            mobileLayout = await mobile.evaluate(() => ({
+              viewport: innerWidth,
+              documentWidth: document.documentElement.scrollWidth,
+            }));
+            assert(
+              mobileLayout.documentWidth <= mobileLayout.viewport + 2,
+              'Revision planner overflows mobile viewport: ' + JSON.stringify(mobileLayout)
+            );
+
+            await mobile.goBack({ waitUntil: 'domcontentloaded' });
+            await mobile.getByText('Manage Habits', { exact: true }).last().click();
+            await mobile.waitForURL(/\/habits\/?$/, { timeout: 30000 });
+            await mobile.getByText('Create, edit, categorize, and archive habits.', { exact: true }).waitFor({ timeout: 30000 });
+
+            assert(mobileErrors.length === 0, 'Mobile browser runtime errors: ' + mobileErrors.join(' | '));
+            await mobile.screenshot({ path: 'student-toolkit-browser-audit-mobile.png', fullPage: true });
+            await mobileContext.close();
 
             await browser.close();
-            console.log('Student Toolkit browser journeys passed.');
+            console.log('Student Toolkit desktop and mobile browser journeys passed.');
           })().catch(error => {
             console.error(error);
             process.exit(1);
@@ -139,6 +186,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: student-toolkit-browser-audit
-          path: student-toolkit-browser-audit.png
+          path: |
+            student-toolkit-browser-audit.png
+            student-toolkit-browser-audit-mobile.png
           if-no-files-found: warn
           retention-days: 7
