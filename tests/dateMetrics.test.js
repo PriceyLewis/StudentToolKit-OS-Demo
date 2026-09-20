@@ -1,6 +1,12 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { dateCoveragePercent, filterHistoryToDateWindow, lastNLocalDateKeys } = require("../src/utils/dateMetrics.js");
+const {
+  dateCoveragePercent,
+  daysUntilLocalDateKey,
+  filterHistoryToDateWindow,
+  lastNLocalDateKeys,
+  parseLocalDateKey,
+} = require("../src/utils/dateMetrics.js");
 
 test("lastNLocalDateKeys returns exact local calendar days", () => {
   const reference = new Date(2026, 8, 19, 23, 30);
@@ -28,4 +34,18 @@ test("dateCoveragePercent counts unique calendar dates rather than raw records",
     { date: "2026-09-19" },
   ];
   assert.equal(dateCoveragePercent(history, 4, new Date(2026, 8, 19)), 50);
+});
+
+
+test("parseLocalDateKey rejects impossible dates instead of normalising them", () => {
+  assert.equal(parseLocalDateKey("2026-02-31"), null);
+  assert.equal(parseLocalDateKey("2025-02-29"), null);
+  assert.ok(parseLocalDateKey("2028-02-29") instanceof Date);
+});
+
+test("daysUntilLocalDateKey uses local calendar boundaries and rejects corrupt values", () => {
+  const reference = new Date(2026, 8, 20, 23, 55);
+  assert.equal(daysUntilLocalDateKey("2026-09-20", reference), 0);
+  assert.equal(daysUntilLocalDateKey("2026-09-21", reference), 1);
+  assert.equal(daysUntilLocalDateKey("2026-02-31", reference), null);
 });
