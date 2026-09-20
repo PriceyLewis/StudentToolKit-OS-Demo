@@ -1,6 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { router, Stack } from "expo-router";
 import { useEffect } from "react";
+import { Platform } from "react-native";
 import { HabitProvider } from "../context/HabitContext";
 import { NotificationProvider } from "../context/NotificationContext";
 import { PerformanceProvider } from "../context/PerformanceContext";
@@ -9,6 +10,10 @@ import { ThemeProvider } from "../context/theme";
 
 function NotificationNavigationListener() {
   useEffect(() => {
+    if (Platform.OS === "web") {
+      return;
+    }
+
     const openRoute = (route: unknown) => {
       if (typeof route === "string" && route.length > 0) {
         router.navigate(route as any);
