@@ -1,0 +1,142 @@
+name: Browser journeys
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Export production GitHub Pages build
+        env:
+          GITHUB_PAGES: "1"
+        run: npx expo export --platform web --output-dir dist
+
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Exercise portfolio and planner journeys
+        run: |
+          rm -rf test-site
+          mkdir -p test-site/StudentToolKit-OS-Demo
+          cp -R dist/. test-site/StudentToolKit-OS-Demo/
+          python3 -m http.server 4173 --directory test-site >/tmp/student-toolkit-browser.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+
+          for attempt in {1..20}; do
+            if curl -fsS http://127.0.0.1:4173/StudentToolKit-OS-Demo/ >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          node <<'NODE'
+          const { chromium } = require('playwright');
+
+          const assert = (condition, message) => {
+            if (!condition) throw new Error(message);
+          };
+
+          (async () => {
+            const browser = await chromium.launch();
+            const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+            const page = await context.newPage();
+            const base = 'http://127.0.0.1:4173/StudentToolKit-OS-Demo/';
+
+            const runtimeErrors = [];
+            page.on('pageerror', error => runtimeErrors.push(error.message));
+            page.on('console', msg => {
+              if (msg.type() === 'error' && !/favicon|ResizeObserver loop/i.test(msg.text())) {
+                runtimeErrors.push(msg.text());
+              }
+            });
+            page.on('dialog', dialog => dialog.accept());
+
+            await page.goto(base, { waitUntil: 'networkidle' });
+            await page.getByText('Student Toolkit OS').waitFor();
+
+            // Build a normal local workspace first.
+            await page.getByPlaceholder('Your name').fill('Audit User');
+            await page.getByPlaceholder(/Primary focus/).fill('Portfolio QA');
+            await page.getByText('Create My Dashboard', { exact: true }).click();
+            await page.getByText(/Welcome.*Audit User/i).waitFor({ timeout: 30000 });
+
+            // Enter demo mode from an existing workspace and verify sample data appears.
+            await page.getByText('Load interactive portfolio demo', { exact: true }).click();
+            await page.getByText(/Welcome back, Alex/i).waitFor({ timeout: 30000 });
+            await page.getByText('Academic Performance', { exact: true }).waitFor();
+
+            const routes = [
+              ['Academic Performance', 'Adaptive Revision Scheduler'],
+              ['Physical Conditioning', 'Physical Conditioning Planner'],
+              ['Income Development', 'Income Development Planner'],
+              ['Professional Profile', 'Professional Profile Planner'],
+              ['Edit Targets', 'Performance Targets'],
+              ['Manage Habits', 'Manage Habits'],
+            ];
+
+            for (const [buttonText, destinationText] of routes) {
+              const locator = page.getByText(buttonText, { exact: true }).last();
+              await locator.click();
+              await page.getByText(destinationText, { exact: true }).waitFor({ timeout: 30000 });
+              await page.goBack({ waitUntil: 'domcontentloaded' });
+              await page.getByText('Academic Performance', { exact: true }).waitFor({ timeout: 30000 });
+            }
+
+            await page.getByText('Open Weekly Review', { exact: true }).click();
+            await page.getByText('Weekly Review', { exact: true }).first().waitFor({ timeout: 30000 });
+            await page.goBack({ waitUntil: 'domcontentloaded' });
+            await page.getByText('Academic Performance', { exact: true }).waitFor();
+
+            await page.getByText('Analytics', { exact: true }).first().click();
+            await page.getByText('Analytics', { exact: true }).first().waitFor({ timeout: 30000 });
+            assert(/Trends and consistency/i.test(await page.locator('body').innerText()), 'Analytics content missing');
+            await page.goBack({ waitUntil: 'domcontentloaded' });
+            await page.getByText('Academic Performance', { exact: true }).waitFor();
+
+            // Exit demo and prove the pre-demo profile returns.
+            await page.getByText('Exit demo & restore previous data', { exact: true }).click();
+            await page.getByText(/Welcome.*Audit User/i).waitFor({ timeout: 30000 });
+
+            assert(runtimeErrors.length === 0, 'Browser runtime errors: ' + runtimeErrors.join(' | '));
+            await page.screenshot({ path: 'student-toolkit-browser-audit.png', fullPage: true });
+
+            await browser.close();
+            console.log('Student Toolkit browser journeys passed.');
+          })().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
+
+      - name: Upload browser audit screenshot
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: student-toolkit-browser-audit
+          path: student-toolkit-browser-audit.png
+          if-no-files-found: warn
+          retention-days: 7
