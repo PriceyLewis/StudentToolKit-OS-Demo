@@ -6,7 +6,7 @@
 
 ![Student Toolkit OS interactive demo dashboard captured from the Expo web build](docs/screenshots/student-toolkit-dashboard.png)
 
-[View the recruiter case study](https://priceylewis.github.io/projects/student-toolkit.html)
+[Launch the live web demo](https://priceylewis.github.io/StudentToolKit-OS-Demo/) · [View the recruiter case study](https://priceylewis.github.io/projects/student-toolkit.html)
 
 Student Toolkit OS is a cross-platform student performance and planning app that brings academics, habits, fitness, portfolio work and career progress into one coherent weekly system.
 
