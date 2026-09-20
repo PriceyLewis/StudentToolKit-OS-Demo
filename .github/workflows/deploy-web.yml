@@ -51,3 +51,18 @@ jobs:
           git commit -m "Deploy Student Toolkit web demo from ${GITHUB_SHA}"
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push --force origin gh-pages
+
+      - name: Verify published demo
+        run: |
+          for attempt in {1..12}; do
+            if curl --fail --silent --show-error --location --max-time 20 \
+              https://priceylewis.github.io/StudentToolKit-OS-Demo/ \
+              | grep -q '<div id="root"'; then
+              echo "Student Toolkit live demo is responding."
+              exit 0
+            fi
+            echo "Live demo not ready yet (attempt $attempt/12)."
+            sleep 10
+          done
+          echo "Student Toolkit live demo did not become reachable."
+          exit 1
