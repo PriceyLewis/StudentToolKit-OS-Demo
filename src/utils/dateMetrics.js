@@ -6,6 +6,33 @@ function toLocalDateKey(date) {
   return `${year}-${month}-${day}`;
 }
 
+function parseLocalDateKey(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+  return date;
+}
+
+function daysUntilLocalDateKey(value, referenceDate = new Date()) {
+  const target = parseLocalDateKey(value);
+  if (!target) {
+    return null;
+  }
+  target.setHours(0, 0, 0, 0);
+  const reference = new Date(referenceDate);
+  reference.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - reference.getTime()) / 86400000);
+}
+
 function lastNLocalDateKeys(days, referenceDate = new Date()) {
   const count = Math.max(0, Math.round(Number(days) || 0));
   const reference = new Date(referenceDate);
@@ -41,4 +68,11 @@ function dateCoveragePercent(history, days, referenceDate = new Date()) {
   return Math.round((covered.size / count) * 100);
 }
 
-module.exports = { toLocalDateKey, lastNLocalDateKeys, filterHistoryToDateWindow, dateCoveragePercent };
+module.exports = {
+  toLocalDateKey,
+  parseLocalDateKey,
+  daysUntilLocalDateKey,
+  lastNLocalDateKeys,
+  filterHistoryToDateWindow,
+  dateCoveragePercent,
+};
