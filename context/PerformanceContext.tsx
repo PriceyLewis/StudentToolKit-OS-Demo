@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useEffect, useState } from "react";
 import type { HistoryEntry } from "../src/utils/review";
+import { sanitizeHistoryEntries, toFiniteNumber } from "../src/utils/performanceSanitizer";
 import { getJSON, setJSON } from "../src/utils/storage";
 
 const PERFORMANCE_STORAGE_KEY = "performanceState";
@@ -140,7 +141,7 @@ export const PerformanceProvider = ({ children }: any) => {
     setIsHydrated(false);
     try {
       const storedHistory = await getJSON<HistoryEntry[]>("performanceHistory", []);
-      setPerformanceHistory(Array.isArray(storedHistory) ? storedHistory : []);
+      setPerformanceHistory(sanitizeHistoryEntries(storedHistory) as HistoryEntry[]);
 
       const parsedState = await getJSON<Partial<PersistedPerformanceState> | null>(
         PERFORMANCE_STORAGE_KEY,
@@ -170,22 +171,22 @@ export const PerformanceProvider = ({ children }: any) => {
         return;
       }
 
-      setAcademicScoreState(Number(parsedState.academicScore ?? DEFAULT_PERFORMANCE_STATE.academicScore));
-      setFitnessScoreState(Number(parsedState.fitnessScore ?? DEFAULT_PERFORMANCE_STATE.fitnessScore));
-      setHustleScoreState(Number(parsedState.hustleScore ?? DEFAULT_PERFORMANCE_STATE.hustleScore));
-      setCareerScoreState(Number(parsedState.careerScore ?? DEFAULT_PERFORMANCE_STATE.careerScore));
-      setPrevAcademicScore(Number(parsedState.prevAcademicScore ?? DEFAULT_PERFORMANCE_STATE.prevAcademicScore));
-      setPrevFitnessScore(Number(parsedState.prevFitnessScore ?? DEFAULT_PERFORMANCE_STATE.prevFitnessScore));
-      setPrevHustleScore(Number(parsedState.prevHustleScore ?? DEFAULT_PERFORMANCE_STATE.prevHustleScore));
-      setPrevCareerScore(Number(parsedState.prevCareerScore ?? DEFAULT_PERFORMANCE_STATE.prevCareerScore));
+      setAcademicScoreState(toFiniteNumber(parsedState.academicScore, DEFAULT_PERFORMANCE_STATE.academicScore, { min: 0, max: 100 }));
+      setFitnessScoreState(toFiniteNumber(parsedState.fitnessScore, DEFAULT_PERFORMANCE_STATE.fitnessScore, { min: 0, max: 100 }));
+      setHustleScoreState(toFiniteNumber(parsedState.hustleScore, DEFAULT_PERFORMANCE_STATE.hustleScore, { min: 0, max: 100 }));
+      setCareerScoreState(toFiniteNumber(parsedState.careerScore, DEFAULT_PERFORMANCE_STATE.careerScore, { min: 0, max: 100 }));
+      setPrevAcademicScore(toFiniteNumber(parsedState.prevAcademicScore, DEFAULT_PERFORMANCE_STATE.prevAcademicScore, { min: 0, max: 100 }));
+      setPrevFitnessScore(toFiniteNumber(parsedState.prevFitnessScore, DEFAULT_PERFORMANCE_STATE.prevFitnessScore, { min: 0, max: 100 }));
+      setPrevHustleScore(toFiniteNumber(parsedState.prevHustleScore, DEFAULT_PERFORMANCE_STATE.prevHustleScore, { min: 0, max: 100 }));
+      setPrevCareerScore(toFiniteNumber(parsedState.prevCareerScore, DEFAULT_PERFORMANCE_STATE.prevCareerScore, { min: 0, max: 100 }));
       setAcademicUpdatedAt(parsedState.academicUpdatedAt ?? DEFAULT_PERFORMANCE_STATE.academicUpdatedAt);
       setFitnessUpdatedAt(parsedState.fitnessUpdatedAt ?? DEFAULT_PERFORMANCE_STATE.fitnessUpdatedAt);
       setHustleUpdatedAt(parsedState.hustleUpdatedAt ?? DEFAULT_PERFORMANCE_STATE.hustleUpdatedAt);
       setCareerUpdatedAt(parsedState.careerUpdatedAt ?? DEFAULT_PERFORMANCE_STATE.careerUpdatedAt);
-      setAcademicTarget(Number(parsedState.academicTarget ?? DEFAULT_PERFORMANCE_STATE.academicTarget));
-      setFitnessTarget(Number(parsedState.fitnessTarget ?? DEFAULT_PERFORMANCE_STATE.fitnessTarget));
-      setHustleTarget(Number(parsedState.hustleTarget ?? DEFAULT_PERFORMANCE_STATE.hustleTarget));
-      setCareerTarget(Number(parsedState.careerTarget ?? DEFAULT_PERFORMANCE_STATE.careerTarget));
+      setAcademicTarget(toFiniteNumber(parsedState.academicTarget, DEFAULT_PERFORMANCE_STATE.academicTarget, { min: 0, max: 168, integer: true }));
+      setFitnessTarget(toFiniteNumber(parsedState.fitnessTarget, DEFAULT_PERFORMANCE_STATE.fitnessTarget, { min: 0, max: 7, integer: true }));
+      setHustleTarget(toFiniteNumber(parsedState.hustleTarget, DEFAULT_PERFORMANCE_STATE.hustleTarget, { min: 0, max: 168, integer: true }));
+      setCareerTarget(toFiniteNumber(parsedState.careerTarget, DEFAULT_PERFORMANCE_STATE.careerTarget, { min: 0, max: 100, integer: true }));
       setAcademicDeadline(String(parsedState.academicDeadline ?? DEFAULT_PERFORMANCE_STATE.academicDeadline));
       setFitnessDeadline(String(parsedState.fitnessDeadline ?? DEFAULT_PERFORMANCE_STATE.fitnessDeadline));
       setHustleDeadline(String(parsedState.hustleDeadline ?? DEFAULT_PERFORMANCE_STATE.hustleDeadline));
@@ -265,47 +266,52 @@ export const PerformanceProvider = ({ children }: any) => {
 
   const setAcademicScore = (score: number) => {
     setAcademicScoreState((current) => {
-      if (current !== score) {
+      const next = toFiniteNumber(score, current, { min: 0, max: 100 });
+      if (current !== next) {
         setPrevAcademicScore(current);
         setAcademicUpdatedAt(new Date().toISOString());
       }
-      return score;
+      return next;
     });
   };
 
   const setFitnessScore = (score: number) => {
     setFitnessScoreState((current) => {
-      if (current !== score) {
+      const next = toFiniteNumber(score, current, { min: 0, max: 100 });
+      if (current !== next) {
         setPrevFitnessScore(current);
         setFitnessUpdatedAt(new Date().toISOString());
       }
-      return score;
+      return next;
     });
   };
 
   const setHustleScore = (score: number) => {
     setHustleScoreState((current) => {
-      if (current !== score) {
+      const next = toFiniteNumber(score, current, { min: 0, max: 100 });
+      if (current !== next) {
         setPrevHustleScore(current);
         setHustleUpdatedAt(new Date().toISOString());
       }
-      return score;
+      return next;
     });
   };
 
   const setCareerScore = (score: number) => {
     setCareerScoreState((current) => {
-      if (current !== score) {
+      const next = toFiniteNumber(score, current, { min: 0, max: 100 });
+      if (current !== next) {
         setPrevCareerScore(current);
         setCareerUpdatedAt(new Date().toISOString());
       }
-      return score;
+      return next;
     });
   };
 
   const savePerformanceHistory = useCallback(async (history: HistoryEntry[]) => {
-    setPerformanceHistory(history);
-    await setJSON("performanceHistory", history);
+    const sanitized = sanitizeHistoryEntries(history) as HistoryEntry[];
+    setPerformanceHistory(sanitized);
+    await setJSON("performanceHistory", sanitized);
   }, []);
 
   const resetPerformanceData = useCallback(async () => {
