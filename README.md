@@ -4,6 +4,15 @@
 
 **Interactive portfolio demo · React Native · Expo Router · TypeScript · Local-first**
 
+
+## Portfolio release status
+
+**v1.0.0 Portfolio Release · Verified 20 September 2026**
+
+This is the recruiter-facing release of the project. Automated tests and the public demo journey have been re-verified before publication.
+
+[Read the v1.0.0 release notes](./RELEASE_NOTES_v1.0.0.md)
+
 ![Student Toolkit OS interactive demo dashboard captured from the Expo web build](docs/screenshots/student-toolkit-dashboard.png)
 
 [Launch the live web demo](https://priceylewis.github.io/StudentToolKit-OS-Demo/) · [View the recruiter case study](https://priceylewis.github.io/projects/student-toolkit.html)
