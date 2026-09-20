@@ -3,6 +3,7 @@ import { useContext, useMemo, useState } from "react";
 import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { PerformanceContext } from "../context/PerformanceContext";
 import { useThemedStyles, type AppThemeTokens } from "../context/theme";
+import { toFiniteNumber } from "../src/utils/performanceSanitizer";
 
 type DeadlineField = "academic" | "fitness" | "hustle" | "career";
 
@@ -126,7 +127,7 @@ export default function Targets() {
         style={styles.input}
         keyboardType="numeric"
         value={academicTarget.toString()}
-        onChangeText={(v) => setAcademicTarget(parseInt(v, 10) || 0)}
+        onChangeText={(v) => setAcademicTarget(toFiniteNumber(v, 0, { min: 0, max: 168, integer: true }))}
       />
       {renderDeadlineControl("academic")}
 
@@ -135,7 +136,7 @@ export default function Targets() {
         style={styles.input}
         keyboardType="numeric"
         value={fitnessTarget.toString()}
-        onChangeText={(v) => setFitnessTarget(parseInt(v, 10) || 0)}
+        onChangeText={(v) => setFitnessTarget(toFiniteNumber(v, 0, { min: 0, max: 7, integer: true }))}
       />
       {renderDeadlineControl("fitness")}
 
@@ -144,7 +145,7 @@ export default function Targets() {
         style={styles.input}
         keyboardType="numeric"
         value={hustleTarget.toString()}
-        onChangeText={(v) => setHustleTarget(parseInt(v, 10) || 0)}
+        onChangeText={(v) => setHustleTarget(toFiniteNumber(v, 0, { min: 0, max: 168, integer: true }))}
       />
       {renderDeadlineControl("hustle")}
 
@@ -153,7 +154,7 @@ export default function Targets() {
         style={styles.input}
         keyboardType="numeric"
         value={careerTarget.toString()}
-        onChangeText={(v) => setCareerTarget(parseInt(v, 10) || 0)}
+        onChangeText={(v) => setCareerTarget(toFiniteNumber(v, 0, { min: 0, max: 100, integer: true }))}
       />
       {renderDeadlineControl("career")}
 
