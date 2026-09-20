@@ -122,6 +122,7 @@ jobs:
             // Exit demo and prove the pre-demo profile returns.
             await page.getByText('Exit demo & restore previous data', { exact: true }).click();
             await page.getByText(/Welcome.*Audit User/i).waitFor({ timeout: 30000 });
+            await page.waitForTimeout(900);
 
             assert(runtimeErrors.length === 0, 'Browser runtime errors: ' + runtimeErrors.join(' | '));
             await page.screenshot({ path: 'student-toolkit-browser-audit.png', fullPage: true });
