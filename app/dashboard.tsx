@@ -34,6 +34,7 @@ import {
   resetPortfolioDemo,
   seedPortfolioDemo,
 } from "../src/utils/demoData";
+import { daysUntilLocalDateKey, parseLocalDateKey } from "../src/utils/dateMetrics";
 import { getJSON, setJSON } from "../src/utils/storage";
 
 const BADGE_TOAST_DURATION_MS = 1800;
@@ -105,27 +106,7 @@ const getLocalDateKey = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const parseLocalDateKey = (value: string) => {
-  const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) {
-    return null;
-  }
-  return new Date(year, month - 1, day);
-};
-
-const isValidDateKey = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
-
-const getDaysRemaining = (dateKey: string) => {
-  if (!isValidDateKey(dateKey)) {
-    return null;
-  }
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const target = new Date(year, month - 1, day);
-  target.setHours(0, 0, 0, 0);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.ceil((target.getTime() - today.getTime()) / 86400000);
-};
+const getDaysRemaining = (dateKey: string) => daysUntilLocalDateKey(dateKey);
 
 const getWeekKeyFromDateKey = (dateKey: string) => {
   const date = parseLocalDateKey(dateKey);
