@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { ProgressChart } from "react-native-chart-kit";
 import PerformanceGraph from "../components/PerformanceGraph";
+import AppNavigation from "../components/AppNavigation";
 import TodayCommandCenter, { type TodayPriority } from "../components/dashboard/TodayCommandCenter";
 import { useHabits } from "../context/HabitContext";
 import { useNotificationPrefs } from "../context/NotificationContext";
@@ -210,7 +211,7 @@ export default function DashboardScreen() {
   } = useNotificationPrefs();
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isCompact = width < 390;
+  const isCompact = width < 640;
 
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const headerTranslateY = useRef(new Animated.Value(12)).current;
@@ -389,7 +390,7 @@ export default function DashboardScreen() {
     const areaAverages = {
       Academic: monthHistory.reduce((sum, item) => sum + item.academic, 0) / monthHistory.length,
       Fitness: monthHistory.reduce((sum, item) => sum + item.fitness, 0) / monthHistory.length,
-      Hustle: monthHistory.reduce((sum, item) => sum + item.hustle, 0) / monthHistory.length,
+      "Projects & Income": monthHistory.reduce((sum, item) => sum + item.hustle, 0) / monthHistory.length,
       Career: monthHistory.reduce((sum, item) => sum + item.career, 0) / monthHistory.length,
     };
     const sortedAreas = Object.entries(areaAverages).sort((a, b) => b[1] - a[1]);
@@ -658,7 +659,7 @@ export default function DashboardScreen() {
     () => [
       { label: "Academic", deadline: academicDeadline },
       { label: "Fitness", deadline: fitnessDeadline },
-      { label: "Hustle", deadline: hustleDeadline },
+      { label: "Projects & Income", deadline: hustleDeadline },
       { label: "Career", deadline: careerDeadline },
     ]
       .map((item) => ({ ...item, daysRemaining: getDaysRemaining(item.deadline) }))
@@ -764,7 +765,7 @@ export default function DashboardScreen() {
     const avg = {
       Academic: monthHistory.reduce((sum, item) => sum + item.academic, 0) / monthHistory.length,
       Fitness: monthHistory.reduce((sum, item) => sum + item.fitness, 0) / monthHistory.length,
-      Hustle: monthHistory.reduce((sum, item) => sum + item.hustle, 0) / monthHistory.length,
+      "Projects & Income": monthHistory.reduce((sum, item) => sum + item.hustle, 0) / monthHistory.length,
       Career: monthHistory.reduce((sum, item) => sum + item.career, 0) / monthHistory.length,
     };
 
@@ -806,14 +807,14 @@ export default function DashboardScreen() {
   const adaptiveTargetSuggestions = useMemo(() => {
     type AreaMetric = {
       key: "academic" | "fitness" | "hustle" | "career";
-      label: "Academic" | "Fitness" | "Hustle" | "Career";
+      label: "Academic" | "Fitness" | "Projects & Income" | "Career";
       score: number;
     };
 
     const areaMetrics: AreaMetric[] = [
       { key: "academic", label: "Academic", score: academicScore },
       { key: "fitness", label: "Fitness", score: fitnessScore },
-      { key: "hustle", label: "Hustle", score: hustleScore },
+      { key: "hustle", label: "Projects & Income", score: hustleScore },
       { key: "career", label: "Career", score: careerScore },
     ];
     const recentEntries = performanceHistory.slice(
@@ -1474,6 +1475,8 @@ export default function DashboardScreen() {
         </Animated.View>
       ) : null}
 
+      <AppNavigation active="Dashboard" />
+
       <Animated.View
         style={{
           opacity: headerOpacity,
@@ -1485,6 +1488,17 @@ export default function DashboardScreen() {
             ? `Welcome ${name || "Student"}. Let's build momentum.`
             : `Welcome back, ${name || "Student"}`}
         </Text>
+
+        <TodayCommandCenter
+          primaryFocus={primaryFocus}
+          priorities={todayPriorities}
+          habitsDone={doneCount}
+          habitsTotal={activeHabits.length}
+          nearestDeadlineLabel={nearestDeadline?.label ?? null}
+          nearestDeadlineDays={nearestDeadline?.daysRemaining ?? null}
+          onOpen={(href) => router.push(href as any)}
+        />
+
         <View
           style={[
             styles.heroCard,
@@ -1569,19 +1583,17 @@ export default function DashboardScreen() {
               {momentumStatus.message}
             </Text>
           </View>
-          <View style={styles.heroSnapshotRow}>
-            <View style={styles.heroSnapshotCard}>
-              <Text style={styles.heroSnapshotLabel}>Target alignment</Text>
-              <Text style={styles.heroSnapshotValue}>{targetProgressPct}%</Text>
-            </View>
-            <View style={styles.heroSnapshotCard}>
-              <Text style={styles.heroSnapshotLabel}>Focus minutes</Text>
-              <Text style={styles.heroSnapshotValue}>{focusMinutesLifetime}</Text>
-            </View>
-          </View>
         </View>
 
         <View style={[styles.kpiRow, isCompact ? styles.kpiRowCompact : null]}>
+          <View style={styles.kpiCard}>
+            <Text style={styles.kpiLabel}>Target alignment</Text>
+            <Text style={styles.kpiValue}>{targetProgressPct}%</Text>
+          </View>
+          <View style={styles.kpiCard}>
+            <Text style={styles.kpiLabel}>Focus</Text>
+            <Text style={styles.kpiValue}>{focusMinutesLifetime}m</Text>
+          </View>
           <View style={styles.kpiCard}>
             <Text style={styles.kpiLabel}>Consistency</Text>
             <Text style={styles.kpiValue}>{consistency30}%</Text>
@@ -1595,16 +1607,6 @@ export default function DashboardScreen() {
             <Text style={styles.kpiValue}>{streakDays}d</Text>
           </View>
         </View>
-
-        <TodayCommandCenter
-          primaryFocus={primaryFocus}
-          priorities={todayPriorities}
-          habitsDone={doneCount}
-          habitsTotal={activeHabits.length}
-          nearestDeadlineLabel={nearestDeadline?.label ?? null}
-          nearestDeadlineDays={nearestDeadline?.daysRemaining ?? null}
-          onOpen={(href) => router.push(href as any)}
-        />
 
         <View style={[styles.topActionsRow, isCompact ? styles.topActionsRowCompact : null]}>
           <TouchableOpacity

@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, useWindowDimensions } from "react-native";
 import { useState, useContext } from "react";
 import { ProfileContext } from "../context/ProfileContext";
 import { PerformanceContext } from "../context/PerformanceContext";
@@ -10,6 +10,8 @@ import { seedPortfolioDemo } from "../src/utils/demoData";
 export default function Onboarding() {
   const { COLORS } = useTheme();
   const styles = useThemedStyles(createStyles);
+  const { width } = useWindowDimensions();
+  const isCompact = width < 700;
   const [name, setName] = useState("");
   const [focus, setFocus] = useState("");
   const [demoLoading, setDemoLoading] = useState(false);
@@ -47,7 +49,7 @@ export default function Onboarding() {
       <View style={styles.glowPrimary} />
       <View style={styles.glowSecondary} />
 
-      <View style={styles.heroPanel}>
+      <View style={[styles.heroPanel, isCompact ? styles.heroPanelCompact : null]}>
         <View style={styles.badgeRow}>
           <Text style={styles.eyebrow}>Student Toolkit OS</Text>
           <View style={styles.mockBadge}>
@@ -69,6 +71,21 @@ export default function Onboarding() {
           </View>
           <View style={styles.featurePill}>
             <Text style={styles.featurePillText}>Local-first</Text>
+          </View>
+        </View>
+
+        <View style={[styles.productSnapshot, isCompact ? styles.productSnapshotCompact : null]}>
+          <View style={styles.snapshotItem}>
+            <Text style={styles.snapshotValue}>4</Text>
+            <Text style={styles.snapshotLabel}>life areas</Text>
+          </View>
+          <View style={styles.snapshotItem}>
+            <Text style={styles.snapshotValue}>100%</Text>
+            <Text style={styles.snapshotLabel}>local-first</Text>
+          </View>
+          <View style={styles.snapshotItem}>
+            <Text style={styles.snapshotValue}>1 view</Text>
+            <Text style={styles.snapshotLabel}>weekly focus</Text>
           </View>
         </View>
 
@@ -165,6 +182,12 @@ const createStyles = ({ COLORS, RADIUS, SPACING }: AppThemeTokens) =>
       shadowRadius: 18,
       shadowOffset: { width: 0, height: 10 },
       elevation: 4,
+      width: "100%",
+      maxWidth: 1060,
+      alignSelf: "center",
+    },
+    heroPanelCompact: {
+      padding: SPACING.xl,
     },
     badgeRow: {
       flexDirection: "row",
@@ -211,6 +234,35 @@ const createStyles = ({ COLORS, RADIUS, SPACING }: AppThemeTokens) =>
       flexWrap: "wrap",
       gap: SPACING.sm,
       marginBottom: SPACING.xl,
+    },
+    productSnapshot: {
+      flexDirection: "row",
+      gap: SPACING.sm,
+      marginBottom: SPACING.xl,
+    },
+    productSnapshotCompact: {
+      flexWrap: "wrap",
+    },
+    snapshotItem: {
+      flex: 1,
+      minWidth: 120,
+      borderRadius: RADIUS.md,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.surfaceMuted,
+      padding: SPACING.md,
+    },
+    snapshotValue: {
+      color: COLORS.textPrimary,
+      fontWeight: "800",
+      fontSize: 20,
+    },
+    snapshotLabel: {
+      color: COLORS.textMuted,
+      fontSize: 11,
+      fontWeight: "700",
+      textTransform: "uppercase",
+      marginTop: 2,
     },
     featurePill: {
       borderRadius: 999,

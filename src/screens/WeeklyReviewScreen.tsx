@@ -117,10 +117,10 @@ export default function WeeklyReviewScreen() {
     const hustlePctDelta = formatPercentDelta(lastAvg.hustle, prevAvg.hustle);
     if (hustlePctDelta >= 10) {
       nextInsights.push(
-        `You improved Hustle by ${hustlePctDelta}% this week \uD83D\uDD25`
+        `You improved Projects & Income by ${hustlePctDelta}% this week \uD83D\uDD25`
       );
     } else if (hustlePctDelta <= -10) {
-      nextInsights.push(`Hustle dropped ${Math.abs(hustlePctDelta)}% this week. Protect one daily income action.`);
+      nextInsights.push(`Projects & Income dropped ${Math.abs(hustlePctDelta)}% this week. Protect one daily income action.`);
     }
 
     const academicDelta = Math.round(lastAvg.academic - prevAvg.academic);
@@ -374,7 +374,7 @@ export default function WeeklyReviewScreen() {
             <Text style={styles.insightText}>Overall: {weekly.pct}%</Text>
             <Text style={styles.insightText}>Academic: {weekly.pctByCat.academic}%</Text>
             <Text style={styles.insightText}>Fitness: {weekly.pctByCat.fitness}%</Text>
-            <Text style={styles.insightText}>Hustle: {weekly.pctByCat.hustle}%</Text>
+            <Text style={styles.insightText}>Projects & Income: {weekly.pctByCat.hustle}%</Text>
             <Text style={styles.insightText}>Career: {weekly.pctByCat.career}%</Text>
           </>
         ) : (

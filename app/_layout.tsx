@@ -57,6 +57,7 @@ export default function Layout() {
                 <Stack.Screen name="habits" />
                 <Stack.Screen name="weekly-review" />
                 <Stack.Screen name="analytics" />
+                <Stack.Screen name="settings" />
                 <Stack.Screen name="privacy" />
                 <Stack.Screen name="disclaimer" />
               </Stack>
@@ -67,4 +68,3 @@ export default function Layout() {
     </ThemeProvider>
   );
 }
-

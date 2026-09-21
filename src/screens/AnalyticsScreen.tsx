@@ -128,7 +128,7 @@ export default function AnalyticsScreen() {
         currentMonthHistory.reduce((total, item) => total + item.academic, 0) / currentMonthHistory.length,
       Fitness:
         currentMonthHistory.reduce((total, item) => total + item.fitness, 0) / currentMonthHistory.length,
-      Hustle:
+      "Projects & Income":
         currentMonthHistory.reduce((total, item) => total + item.hustle, 0) / currentMonthHistory.length,
       Career:
         currentMonthHistory.reduce((total, item) => total + item.career, 0) / currentMonthHistory.length,
@@ -238,9 +238,9 @@ export default function AnalyticsScreen() {
       </View>
 
       <View style={[styles.card, isCompact ? styles.cardCompact : null]}>
-        <Text style={styles.cardTitle}>Hustle</Text>
+        <Text style={styles.cardTitle}>Projects & Income</Text>
         {hasData ? (
-          <PerformanceGraph data={hustle} label="Hustle" />
+          <PerformanceGraph data={hustle} label="Projects & Income" />
         ) : (
           <Text style={styles.empty}>Need one more update to chart this trend.</Text>
         )}

@@ -6,6 +6,9 @@ export const createStyles = ({ COLORS, RADIUS, SPACING }: AppThemeTokens) => Sty
     padding: SPACING.xxl,
     backgroundColor: COLORS.backgroundAlt,
     flexGrow: 1,
+    width: "100%",
+    maxWidth: 1180,
+    alignSelf: "center",
   },
   containerCompact: {
     padding: SPACING.lg,
@@ -56,7 +59,8 @@ export const createStyles = ({ COLORS, RADIUS, SPACING }: AppThemeTokens) => Sty
     borderRadius: RADIUS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: SPACING.xxl,
+    padding: SPACING.xl,
+    marginTop: SPACING.lg,
     shadowColor: COLORS.black,
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -82,8 +86,8 @@ export const createStyles = ({ COLORS, RADIUS, SPACING }: AppThemeTokens) => Sty
     gap: SPACING.md,
   },
   scoreRingWrap: {
-    width: 126,
-    height: 126,
+    width: 112,
+    height: 112,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -192,19 +196,21 @@ export const createStyles = ({ COLORS, RADIUS, SPACING }: AppThemeTokens) => Sty
     gap: SPACING.sm,
     marginTop: SPACING.md,
     marginBottom: SPACING.xl,
+    flexWrap: "wrap",
   },
   kpiRowCompact: {
     gap: SPACING.xs,
   },
   kpiCard: {
     flex: 1,
-    backgroundColor: COLORS.surfaceMuted,
+    minWidth: 132,
+    backgroundColor: COLORS.card,
     borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.sm,
-    alignItems: "center",
+    alignItems: "flex-start",
   },
   kpiLabel: {
     color: COLORS.textMuted,
@@ -214,7 +220,7 @@ export const createStyles = ({ COLORS, RADIUS, SPACING }: AppThemeTokens) => Sty
   kpiValue: {
     color: COLORS.textPrimary,
     fontWeight: "700",
-    fontSize: 16,
+    fontSize: 20,
   },
   topActionsRow: {
     flexDirection: "row",
@@ -733,4 +739,3 @@ export const createStyles = ({ COLORS, RADIUS, SPACING }: AppThemeTokens) => Sty
     fontWeight: "600",
   },
 });
-

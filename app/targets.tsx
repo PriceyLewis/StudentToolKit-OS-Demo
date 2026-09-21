@@ -56,7 +56,7 @@ export default function Targets() {
     () => ({
       academic: { value: academicDeadline, setValue: setAcademicDeadline, label: "Academic" },
       fitness: { value: fitnessDeadline, setValue: setFitnessDeadline, label: "Fitness" },
-      hustle: { value: hustleDeadline, setValue: setHustleDeadline, label: "Hustle" },
+      hustle: { value: hustleDeadline, setValue: setHustleDeadline, label: "Projects & Income" },
       career: { value: careerDeadline, setValue: setCareerDeadline, label: "Career" },
     }),
     [
@@ -276,4 +276,3 @@ const createStyles = ({ COLORS, RADIUS, SPACING }: AppThemeTokens) =>
       fontWeight: "700",
     },
   });
-
