@@ -60,6 +60,24 @@ jobs:
             if (!condition) throw new Error(message);
           };
 
+          async function assertChartFits(page) {
+            const graph = page.getByTestId('performance-graph').first();
+            await graph.locator('svg').first().waitFor();
+            await page.waitForFunction(() => {
+              const graph = document.querySelector('[data-testid="performance-graph"]');
+              const svg = graph?.querySelector('svg');
+              return graph && svg && Math.abs(graph.getBoundingClientRect().width - svg.getBoundingClientRect().width) <= 2;
+            });
+            const layout = await graph.evaluate(element => ({
+              cardWidth: element.getBoundingClientRect().width,
+              chartWidth: element.querySelector('svg').getBoundingClientRect().width,
+              viewport: innerWidth,
+              documentWidth: document.documentElement.scrollWidth,
+            }));
+            assert(Math.abs(layout.cardWidth - layout.chartWidth) <= 2, 'Chart does not fill its card: ' + JSON.stringify(layout));
+            assert(layout.documentWidth <= layout.viewport + 2, 'Analytics overflows viewport: ' + JSON.stringify(layout));
+          }
+
           (async () => {
             const browser = await chromium.launch();
             const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -116,6 +134,12 @@ jobs:
             await page.waitForURL(/\/analytics\/?$/, { timeout: 30000 });
             await page.getByText('Trends and consistency', { exact: true }).waitFor({ timeout: 30000 });
             assert(/Trends and consistency/i.test(await page.locator('body').innerText()), 'Analytics content missing');
+            await assertChartFits(page);
+            await page.screenshot({ path: 'analytics-desktop.png', fullPage: true });
+            await page.setViewportSize({ width: 768, height: 900 });
+            await assertChartFits(page);
+            await page.setViewportSize({ width: 1280, height: 900 });
+            await assertChartFits(page);
             await page.goBack({ waitUntil: 'domcontentloaded' });
             await page.getByText('Academic Performance', { exact: true }).waitFor();
 
@@ -143,6 +167,16 @@ jobs:
             await mobile.goto(base, { waitUntil: 'networkidle' });
             await mobile.getByText('Try Interactive Demo', { exact: true }).click();
             await mobile.getByText('Academic Performance', { exact: true }).waitFor({ timeout: 30000 });
+
+            await mobile.getByRole('button', { name: 'Analytics', exact: true }).click();
+            await mobile.getByText('Trends and consistency', { exact: true }).waitFor();
+            await assertChartFits(mobile);
+            await mobile.screenshot({ path: 'analytics-mobile.png', fullPage: true });
+            await mobile.setViewportSize({ width: 320, height: 740 });
+            await assertChartFits(mobile);
+            await mobile.setViewportSize({ width: 390, height: 844 });
+            await mobile.goBack({ waitUntil: 'domcontentloaded' });
+            await mobile.getByText('Academic Performance', { exact: true }).waitFor();
 
             let mobileLayout = await mobile.evaluate(() => ({
               viewport: innerWidth,
@@ -190,5 +224,7 @@ jobs:
           path: |
             student-toolkit-browser-audit.png
             student-toolkit-browser-audit-mobile.png
+            analytics-desktop.png
+            analytics-mobile.png
           if-no-files-found: warn
           retention-days: 7

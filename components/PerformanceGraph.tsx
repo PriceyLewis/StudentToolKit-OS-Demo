@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { View } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { useTheme } from "../context/theme";
@@ -14,15 +14,23 @@ type PerformanceGraphProps = {
   width?: number;
 };
 
-export default function PerformanceGraph({ data, label, width = 320 }: PerformanceGraphProps) {
+export default function PerformanceGraph({ data, label, width }: PerformanceGraphProps) {
   const { COLORS, RADIUS } = useTheme();
-  const labels = data.map((d) => d.date.slice(5));
+  const [containerWidth, setContainerWidth] = useState(0);
+  const chartWidth = Math.max(0, Math.floor(Math.min(containerWidth, width ?? containerWidth)));
+  const labelInterval = Math.max(1, Math.ceil(data.length / Math.max(2, Math.floor(chartWidth / 70))));
+  const labels = data.map((d, index) =>
+    index % labelInterval === 0 ? d.date.slice(5) : ""
+  );
   const values = data.map((d) => d.value);
-  const chartWidth = Math.max(220, width);
 
   return (
-    <View>
-      <LineChart
+    <View
+      testID="performance-graph"
+      style={{ width: "100%", minHeight: 220 }}
+      onLayout={({ nativeEvent }) => setContainerWidth(nativeEvent.layout.width)}
+    >
+      {chartWidth > 0 && <LineChart
         data={{
           labels,
           datasets: [
@@ -62,7 +70,7 @@ export default function PerformanceGraph({ data, label, width = 320 }: Performan
         withOuterLines={false}
         withVerticalLines={false}
         fromZero
-      />
+      />}
     </View>
   );
 }
