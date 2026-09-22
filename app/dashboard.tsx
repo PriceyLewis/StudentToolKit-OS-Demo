@@ -160,7 +160,7 @@ const getEntryAverage = (entry: {
 }) => (entry.academic + entry.fitness + entry.hustle + entry.career) / 4;
 
 export default function DashboardScreen() {
-  const { COLORS, SPACING, mode: dashboardTheme, setMode: setDashboardTheme } = useTheme();
+  const { COLORS, SPACING, mode: dashboardTheme, setMode: setDashboardTheme, rehydrateTheme } = useTheme();
   const styles = useThemedStyles(createStyles);
   const {
     academicScore,
@@ -1183,6 +1183,7 @@ export default function DashboardScreen() {
       await resetHabitsData();
       await resetPerformanceData();
       await resetProfile();
+      await rehydrateTheme();
 
       router.replace("/onboarding");
     },
@@ -1192,6 +1193,7 @@ export default function DashboardScreen() {
       resetNotificationPrefs,
       resetPerformanceData,
       resetProfile,
+      rehydrateTheme,
       router,
     ]
   );
@@ -1219,6 +1221,7 @@ export default function DashboardScreen() {
       rehydrateHabitsData(),
       rehydrateNotificationPrefs(),
       rehydrateFocusTimer(),
+      rehydrateTheme(),
     ]);
   }, [
     rehydrateHabitsData,
@@ -1226,6 +1229,7 @@ export default function DashboardScreen() {
     rehydrateNotificationPrefs,
     rehydratePerformanceData,
     rehydrateProfile,
+    rehydrateTheme,
   ]);
 
   const handleStartPortfolioDemo = useCallback(async () => {

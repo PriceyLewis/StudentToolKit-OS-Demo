@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { setJSON, getJSON } from "../src/utils/storage";
 
 export const SPACING = {
@@ -121,9 +121,10 @@ type ThemeContextValue = {
   SPACING: typeof SPACING;
   RADIUS: typeof RADIUS;
   setMode: (mode: ThemeMode) => void;
+  rehydrateTheme: () => Promise<void>;
 };
 
-export type AppThemeTokens = Omit<ThemeContextValue, "mode" | "setMode">;
+export type AppThemeTokens = Omit<ThemeContextValue, "mode" | "setMode" | "rehydrateTheme">;
 
 const ThemeContext = createContext<ThemeContextValue>({
   mode: "clean",
@@ -131,12 +132,17 @@ const ThemeContext = createContext<ThemeContextValue>({
   SPACING,
   RADIUS,
   setMode: () => {},
+  rehydrateTheme: async () => {},
 });
 
 export const COLORS = LIGHT_COLORS;
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>("clean");
+  const rehydrateTheme = useCallback(async () => {
+    const stored = await getJSON<ThemeMode | null>(THEME_STORAGE_KEY, null);
+    setModeState(stored === "dark" || stored === "midnight" ? stored : "clean");
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -164,8 +170,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       SPACING,
       RADIUS,
       setMode,
+      rehydrateTheme,
     }),
-    [mode]
+    [mode, rehydrateTheme]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
