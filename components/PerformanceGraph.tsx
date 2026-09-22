@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View } from "react-native";
+import { View, useWindowDimensions } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { useTheme } from "../context/theme";
 
@@ -16,9 +16,26 @@ type PerformanceGraphProps = {
 
 export default function PerformanceGraph({ data, label, width }: PerformanceGraphProps) {
   const { COLORS, RADIUS } = useTheme();
+  const { width: viewportWidth } = useWindowDimensions();
   const [containerWidth, setContainerWidth] = useState(0);
-  const chartWidth = Math.max(0, Math.floor(Math.min(containerWidth, width ?? containerWidth)));
-  const labelInterval = Math.max(1, Math.ceil(data.length / Math.max(2, Math.floor(chartWidth / 70))));
+
+  // React Native Web can deliver onLayout a frame after the chart first renders.
+  // Use the known analytics paddings as a safe first-frame width so the graph
+  // never disappears while waiting for measurement; onLayout then takes over.
+  const estimatedContainerWidth = Math.max(
+    1,
+    width ?? viewportWidth - (viewportWidth < 390 ? 48 : 80)
+  );
+  const availableWidth = containerWidth > 0 ? containerWidth : estimatedContainerWidth;
+  const chartWidth = Math.max(
+    1,
+    Math.floor(Math.min(availableWidth, width ?? availableWidth))
+  );
+
+  const labelInterval = Math.max(
+    1,
+    Math.ceil(data.length / Math.max(2, Math.floor(chartWidth / 70)))
+  );
   const labels = data.map((d, index) =>
     index % labelInterval === 0 ? d.date.slice(5) : ""
   );
@@ -28,9 +45,14 @@ export default function PerformanceGraph({ data, label, width }: PerformanceGrap
     <View
       testID="performance-graph"
       style={{ width: "100%", minHeight: 220 }}
-      onLayout={({ nativeEvent }) => setContainerWidth(nativeEvent.layout.width)}
+      onLayout={({ nativeEvent }) => {
+        const measuredWidth = Math.floor(nativeEvent.layout.width);
+        if (measuredWidth > 0 && measuredWidth !== containerWidth) {
+          setContainerWidth(measuredWidth);
+        }
+      }}
     >
-      {chartWidth > 0 && <LineChart
+      <LineChart
         data={{
           labels,
           datasets: [
@@ -70,7 +92,7 @@ export default function PerformanceGraph({ data, label, width }: PerformanceGrap
         withOuterLines={false}
         withVerticalLines={false}
         fromZero
-      />}
+      />
     </View>
   );
 }
