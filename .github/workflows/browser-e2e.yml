@@ -80,6 +80,11 @@ jobs:
               });
               const svg = graph?.querySelector('svg');
               if (!graph || !svg) return false;
+              // Layout visibility alone includes elements mid-fade. Wait for
+              // every ancestor to finish appearing before inspecting/capturing.
+              for (let node = graph; node; node = node.parentElement) {
+                if (Number(getComputedStyle(node).opacity) < 0.99) return false;
+              }
               const graphRect = graph.getBoundingClientRect();
               const svgRect = svg.getBoundingClientRect();
               return svgRect.width > 0 &&
