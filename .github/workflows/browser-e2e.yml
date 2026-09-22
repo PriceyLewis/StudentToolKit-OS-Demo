@@ -275,10 +275,10 @@ jobs:
             await mobile.setViewportSize({ width: 320, height: 568 });
             await mobile.getByText('Terms of use', { exact: true }).click();
             await mobile.goBack({ waitUntil: 'domcontentloaded' });
-            await mobile.getByText('Scheduled reminders are available in the Android and iOS app.', { exact: true }).waitFor();
+            await mobile.getByText('Scheduled reminders are available in the Android and iOS app.', { exact: true }).and(mobile.locator(':visible')).waitFor();
             assert(await mobile.getByRole('switch', { name: 'Daily reminder' }).isDisabled(), 'Web reminder must be explicitly unavailable');
             for (const theme of ['Dark', 'Midnight', 'Clean Light']) {
-              await mobile.getByText(theme, { exact: true }).click();
+              await mobile.getByText(theme, { exact: true }).and(mobile.locator(':visible')).click();
               await mobile.getByRole('button', { name: 'Analytics', exact: true }).click();
               await assertChartFits(mobile);
               const label = mobile.locator('[data-testid="performance-graph"]:visible').first().locator('svg text').first();
