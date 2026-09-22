@@ -62,18 +62,43 @@ jobs:
 
           async function assertChartFits(page) {
             const graph = page.getByTestId('performance-graph').first();
-            await graph.locator('svg').first().waitFor();
+            const svg = graph.locator('svg').first();
+            await svg.waitFor({ state: 'attached' });
             await page.waitForFunction(() => {
               const graph = document.querySelector('[data-testid="performance-graph"]');
               const svg = graph?.querySelector('svg');
-              return graph && svg && Math.abs(graph.getBoundingClientRect().width - svg.getBoundingClientRect().width) <= 2;
+              if (!graph || !svg) return false;
+              const graphRect = graph.getBoundingClientRect();
+              const svgRect = svg.getBoundingClientRect();
+              return graphRect.width > 0 &&
+                graphRect.height > 0 &&
+                svgRect.width > 0 &&
+                svgRect.height > 0 &&
+                Math.abs(graphRect.width - svgRect.width) <= 2;
             });
-            const layout = await graph.evaluate(element => ({
-              cardWidth: element.getBoundingClientRect().width,
-              chartWidth: element.querySelector('svg').getBoundingClientRect().width,
-              viewport: innerWidth,
-              documentWidth: document.documentElement.scrollWidth,
-            }));
+            const layout = await graph.evaluate(element => {
+              const svg = element.querySelector('svg');
+              const graphRect = element.getBoundingClientRect();
+              const svgRect = svg.getBoundingClientRect();
+              const graphStyle = getComputedStyle(element);
+              const svgStyle = getComputedStyle(svg);
+              return {
+                cardWidth: graphRect.width,
+                cardHeight: graphRect.height,
+                chartWidth: svgRect.width,
+                chartHeight: svgRect.height,
+                graphDisplay: graphStyle.display,
+                graphVisibility: graphStyle.visibility,
+                svgDisplay: svgStyle.display,
+                svgVisibility: svgStyle.visibility,
+                viewport: innerWidth,
+                documentWidth: document.documentElement.scrollWidth,
+              };
+            });
+            assert(layout.cardWidth > 0 && layout.cardHeight > 0, 'Chart card has no rendered size: ' + JSON.stringify(layout));
+            assert(layout.chartWidth > 0 && layout.chartHeight > 0, 'Chart SVG has no rendered size: ' + JSON.stringify(layout));
+            assert(layout.graphDisplay !== 'none' && layout.graphVisibility !== 'hidden', 'Chart card is hidden: ' + JSON.stringify(layout));
+            assert(layout.svgDisplay !== 'none' && layout.svgVisibility !== 'hidden', 'Chart SVG is hidden: ' + JSON.stringify(layout));
             assert(Math.abs(layout.cardWidth - layout.chartWidth) <= 2, 'Chart does not fill its card: ' + JSON.stringify(layout));
             assert(layout.documentWidth <= layout.viewport + 2, 'Analytics overflows viewport: ' + JSON.stringify(layout));
           }
