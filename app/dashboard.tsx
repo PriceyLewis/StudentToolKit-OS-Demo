@@ -1,11 +1,11 @@
+import { Alert } from "../src/utils/alert";
 import { Link, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
+  Platform,
   Animated,
   ScrollView,
-  Linking,
   Switch,
   Text,
   TextInput,
@@ -27,6 +27,7 @@ import {
   createLocalBackupFile,
   pickBackupFile,
   restoreBackupFromFile,
+  validateBackupFile,
 } from "../src/utils/backup";
 import { resetLocalData } from "../src/utils/resetAppData";
 import {
@@ -43,8 +44,6 @@ const FOCUS_TIMER_STORAGE_KEY = "focusTimerState";
 const DEFAULT_FOCUS_MINUTES = 25;
 const MAX_FOCUS_MINUTES = 180;
 const POLICY_LAST_UPDATED = "2026-09-19";
-const PRIVACY_POLICY_URL = "https://github.com/PriceyLewis/StudentToolKit-OS-Demo/blob/main/docs/privacy-policy.md";
-const TERMS_OF_USE_URL = "https://github.com/PriceyLewis/StudentToolKit-OS-Demo/blob/main/docs/terms-of-use.md";
 type CoachingPreset = "strict" | "balanced" | "aggressive";
 type CoachingPresetConfig = {
   fitnessDisciplineHighThreshold: number;
@@ -1266,6 +1265,7 @@ export default function DashboardScreen() {
   const handleExportBackup = useCallback(async () => {
     try {
       const file = await createLocalBackupFile();
+      if (Platform.OS === "web") return;
       const canShare = await Sharing.isAvailableAsync();
 
       if (!canShare) {
@@ -1285,6 +1285,7 @@ export default function DashboardScreen() {
   const performRestoreBackup = useCallback(async () => {
     try {
       const file = await pickBackupFile();
+      await validateBackupFile(file);
       if (demoModeActive) {
         await exitPortfolioDemo();
         setDemoModeActive(false);
@@ -1316,16 +1317,6 @@ export default function DashboardScreen() {
       },
     ]);
   }, [performRestoreBackup]);
-
-  const openPrivacyPolicyUrl = useCallback(async () => {
-    const canOpen = await Linking.canOpenURL(PRIVACY_POLICY_URL);
-    if (!canOpen) {
-      Alert.alert("Policy URL unavailable", "Update the privacy policy URL in dashboard settings.");
-      return;
-    }
-
-    await Linking.openURL(PRIVACY_POLICY_URL);
-  }, []);
 
   const getCardPressAnim = useCallback((id: string) => {
     if (!cardPressAnimsRef.current[id]) {
@@ -2047,13 +2038,14 @@ export default function DashboardScreen() {
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Reminders</Text>
+          {Platform.OS === "web" ? <Text style={styles.habitSummary}>Scheduled reminders are available in the Android and iOS app.</Text> : null}
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Daily reminder</Text>
-            <Switch value={prefs.dailyEnabled} onValueChange={setDailyEnabled} />
+            <Switch accessibilityLabel="Daily reminder" disabled={Platform.OS === "web"} value={prefs.dailyEnabled} onValueChange={setDailyEnabled} />
           </View>
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Weekly review reminder</Text>
-            <Switch value={prefs.weeklyEnabled} onValueChange={setWeeklyEnabled} />
+            <Switch accessibilityLabel="Weekly review reminder" disabled={Platform.OS === "web"} value={prefs.weeklyEnabled} onValueChange={setWeeklyEnabled} />
           </View>
         </View>
 
@@ -2208,29 +2200,7 @@ export default function DashboardScreen() {
             style={styles.linkButton}
             onPress={() => router.push("/disclaimer" as any)}
           >
-            <Text style={styles.linkButtonText}>Open Terms of Use URL</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={styles.linkButton}
-            onPress={() => {
-              openPrivacyPolicyUrl().catch(() => {
-                Alert.alert("Could not open link", "Please try again.");
-              });
-            }}
-          >
-            <Text style={styles.linkButtonText}>Open Privacy Policy URL</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={styles.linkButton}
-            onPress={() => {
-              Linking.openURL(TERMS_OF_USE_URL).catch(() => {
-                Alert.alert("Could not open link", "Please try again.");
-              });
-            }}
-          >
-            <Text style={styles.linkButtonText}>Open Terms of Use URL</Text>
+            <Text style={styles.linkButtonText}>Terms of Use</Text>
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.8}

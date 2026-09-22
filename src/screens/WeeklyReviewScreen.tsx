@@ -1,7 +1,7 @@
+import { Alert } from "../utils/alert";
 import { useRouter } from "expo-router";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   Animated,
   ScrollView,
   StyleSheet,

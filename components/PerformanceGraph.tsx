@@ -68,8 +68,8 @@ export default function PerformanceGraph({ data, label, width }: PerformanceGrap
         chartConfig={{
           backgroundGradientFrom: COLORS.card,
           backgroundGradientTo: COLORS.card,
-          color: (opacity = 1) => `rgba(37, 99, 235, ${opacity})`,
-          labelColor: (opacity = 1) => `rgba(75, 85, 99, ${opacity})`,
+          color: () => COLORS.primary,
+          labelColor: () => COLORS.textSecondary,
           decimalPlaces: 0,
           propsForDots: {
             r: "3",

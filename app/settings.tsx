@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import AppNavigation from "../components/AppNavigation";
 import { useNotificationPrefs } from "../context/NotificationContext";
 import { useTheme, useThemedStyles, type AppThemeTokens } from "../context/theme";
@@ -17,7 +17,7 @@ export default function SettingsScreen() {
   const styles = useThemedStyles(createStyles);
 
   return (
-    <View style={styles.page}>
+    <ScrollView style={styles.page} contentContainerStyle={styles.scrollContent}>
       <View style={styles.content}>
         <AppNavigation active="Settings" />
         <Text style={styles.eyebrow}>Workspace</Text>
@@ -44,19 +44,20 @@ export default function SettingsScreen() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Reminders</Text>
+          {Platform.OS === "web" ? <Text style={styles.cardBody}>Scheduled reminders are available in the Android and iOS app.</Text> : null}
           <View style={styles.settingRow}>
             <View style={styles.settingCopy}>
               <Text style={styles.settingTitle}>Daily reminder</Text>
               <Text style={styles.cardBody}>Keep today’s priorities visible.</Text>
             </View>
-            <Switch value={prefs.dailyEnabled} onValueChange={setDailyEnabled} />
+            <Switch accessibilityLabel="Daily reminder" disabled={Platform.OS === "web"} value={prefs.dailyEnabled} onValueChange={setDailyEnabled} />
           </View>
           <View style={styles.settingRow}>
             <View style={styles.settingCopy}>
               <Text style={styles.settingTitle}>Weekly review reminder</Text>
               <Text style={styles.cardBody}>Prompt a regular progress reset.</Text>
             </View>
-            <Switch value={prefs.weeklyEnabled} onValueChange={setWeeklyEnabled} />
+            <Switch accessibilityLabel="Weekly review reminder" disabled={Platform.OS === "web"} value={prefs.weeklyEnabled} onValueChange={setWeeklyEnabled} />
           </View>
         </View>
 
@@ -70,12 +71,13 @@ export default function SettingsScreen() {
           </View>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const createStyles = ({ COLORS, RADIUS, SPACING }: AppThemeTokens) => StyleSheet.create({
-  page: { flex: 1, backgroundColor: COLORS.backgroundAlt, padding: SPACING.xl },
+  page: { flex: 1, backgroundColor: COLORS.backgroundAlt },
+  scrollContent: { flexGrow: 1, padding: SPACING.xl, paddingBottom: SPACING.xxxl },
   content: { width: "100%", maxWidth: 900, alignSelf: "center" },
   eyebrow: { color: COLORS.primary, fontWeight: "800", fontSize: 11, letterSpacing: 1, textTransform: "uppercase", marginTop: SPACING.md },
   title: { color: COLORS.textPrimary, fontWeight: "800", fontSize: 32, marginTop: SPACING.xs },

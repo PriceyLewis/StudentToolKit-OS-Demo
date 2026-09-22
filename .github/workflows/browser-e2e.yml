@@ -178,10 +178,41 @@ jobs:
             await page.goBack({ waitUntil: 'domcontentloaded' });
             await page.getByText('Academic Performance', { exact: true }).waitFor();
 
+            // Backup export must use browser downloads, and invalid imports must
+            // leave the currently active demo intact.
+            const badChooser = page.waitForEvent('filechooser');
+            await page.getByText('Restore backup', { exact: true }).click();
+            const invalidRestore = page.waitForEvent('dialog', { predicate: dialog => dialog.message().includes('Restore failed') });
+            await (await badChooser).setFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('{broken') });
+            await invalidRestore;
+            await page.getByText(/Welcome back, Alex/i).waitFor();
+            assert(await page.getByText(/Interactive portfolio demo is active/).isVisible(), 'Invalid restore exited the demo');
+
             // Exit demo and prove the pre-demo profile returns.
             await page.getByText('Exit demo & restore previous data', { exact: true }).click();
             await page.getByText(/Welcome.*Audit User/i).waitFor({ timeout: 30000 });
             await page.waitForTimeout(900);
+
+            const downloadPromise = page.waitForEvent('download');
+            await page.getByText('Export backup (JSON)', { exact: true }).click();
+            const backup = await downloadPromise;
+            const backupPath = await backup.path();
+            const backupData = JSON.parse(require('fs').readFileSync(backupPath, 'utf8'));
+            assert(backupData.app === 'student-toolkit' && backupData.data.profileData, 'Backup does not contain the workspace');
+            await page.getByText('Edit Targets', { exact: true }).click();
+            await page.getByLabel('Academic deadline', { exact: true }).fill('2027-06-15');
+            await page.reload({ waitUntil: 'networkidle' });
+            assert(await page.getByLabel('Academic deadline', { exact: true }).inputValue() === '2027-06-15', 'Deadline did not persist');
+            await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+            const chooserPromise = page.waitForEvent('filechooser');
+            await page.getByText('Restore backup', { exact: true }).click();
+            const restored = page.waitForEvent('dialog', { predicate: dialog => dialog.message().includes('Backup restored') });
+            await (await chooserPromise).setFiles(backupPath);
+            await restored;
+            await page.getByText(/Welcome.*Audit User/i).waitFor();
+            await page.getByText('Edit Targets', { exact: true }).click();
+            assert(await page.getByLabel('Academic deadline', { exact: true }).inputValue() === '', 'Backup did not restore the original deadline');
+            await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
 
             assert(runtimeErrors.length === 0, 'Browser runtime errors: ' + runtimeErrors.join(' | '));
             await page.screenshot({ path: 'student-toolkit-browser-audit.png', fullPage: true });
@@ -239,6 +270,26 @@ jobs:
             await mobile.waitForURL(/\/habits\/?$/, { timeout: 30000 });
             await mobile.getByText('Create, edit, categorize, and archive habits.', { exact: true }).waitFor({ timeout: 30000 });
 
+            await mobile.goBack({ waitUntil: 'domcontentloaded' });
+            await mobile.getByRole('button', { name: 'Settings', exact: true }).click();
+            await mobile.setViewportSize({ width: 320, height: 568 });
+            await mobile.getByText('Terms of use', { exact: true }).click();
+            await mobile.goBack({ waitUntil: 'domcontentloaded' });
+            await mobile.getByText('Scheduled reminders are available in the Android and iOS app.', { exact: true }).waitFor();
+            assert(await mobile.getByRole('switch', { name: 'Daily reminder' }).isDisabled(), 'Web reminder must be explicitly unavailable');
+            for (const theme of ['Dark', 'Midnight', 'Clean Light']) {
+              await mobile.getByText(theme, { exact: true }).click();
+              await mobile.getByRole('button', { name: 'Analytics', exact: true }).click();
+              await assertChartFits(mobile);
+              const label = mobile.locator('[data-testid="performance-graph"]:visible').first().locator('svg text').first();
+              const fill = await label.getAttribute('fill');
+              const expected = theme === 'Dark' ? '#CDD5DF' : theme === 'Midnight' ? '#C4D4F1' : '#4B5563';
+              assert(fill?.toUpperCase() === expected, theme + ' chart label does not use the readable theme colour: ' + fill);
+              await mobile.screenshot({ path: 'analytics-' + theme.replaceAll(' ', '-').toLowerCase() + '-mobile.png', fullPage: true });
+              await mobile.getByRole('button', { name: 'Settings', exact: true }).click();
+            }
+            await mobile.screenshot({ path: 'settings-mobile.png', fullPage: true });
+
             assert(mobileErrors.length === 0, 'Mobile browser runtime errors: ' + mobileErrors.join(' | '));
             await mobile.screenshot({ path: 'student-toolkit-browser-audit-mobile.png', fullPage: true });
             await mobileContext.close();
@@ -261,5 +312,7 @@ jobs:
             student-toolkit-browser-audit-mobile.png
             analytics-desktop.png
             analytics-mobile.png
+            analytics-*-mobile.png
+            settings-mobile.png
           if-no-files-found: warn
           retention-days: 7

@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import PerformanceGraph from "../../components/PerformanceGraph";
+import AppNavigation from "../../components/AppNavigation";
 import { useHabits } from "../../context/HabitContext";
 import { PerformanceContext } from "../../context/PerformanceContext";
 import { useThemedStyles, type AppThemeTokens } from "../../context/theme";
@@ -321,6 +322,7 @@ export default function AnalyticsScreen() {
 
   return (
     <ScrollView contentContainerStyle={[styles.container, isCompact ? styles.containerCompact : null]}>
+      <AppNavigation active="Analytics" />
       <Animated.View
         style={{
           opacity: headerOpacity,

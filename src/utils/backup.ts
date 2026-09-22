@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 import { File, Paths } from "expo-file-system";
 import { APP_DATA_KEYS } from "./resetAppData";
 import {
@@ -50,6 +51,17 @@ const buildPayload = async (): Promise<BackupPayload> => {
 export async function createLocalBackupFile() {
   const payload = await buildPayload();
   const timestamp = payload.exportedAt.replace(/[:.]/g, "-");
+  if (Platform.OS === "web") {
+    const uri = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = uri;
+    link.download = `${BACKUP_FILE_PREFIX}-${timestamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(uri), 1000);
+    return { uri };
+  }
   const file = new File(Paths.cache, `${BACKUP_FILE_PREFIX}-${timestamp}.json`);
 
   file.create({ intermediates: true, overwrite: true });
@@ -58,15 +70,19 @@ export async function createLocalBackupFile() {
   return file;
 }
 
-export async function restoreBackupFromFile(file: PickedBackupFile) {
+export async function validateBackupFile(file: PickedBackupFile) {
   const raw = await file.text();
   const allowedKeys = getAllowedKeys();
-  const payload = parseBackupPayload(raw, {
+  return parseBackupPayload(raw, {
     appId: BACKUP_APP_ID,
     version: BACKUP_VERSION,
     allowedKeys,
   });
+}
 
+export async function restoreBackupFromFile(file: PickedBackupFile) {
+  const payload = await validateBackupFile(file);
+  const allowedKeys = getAllowedKeys();
   const transaction = await applyRestoreTransaction(restoreStorage, allowedKeys, payload.data);
 
   return {
@@ -77,6 +93,26 @@ export async function restoreBackupFromFile(file: PickedBackupFile) {
 }
 
 export async function pickBackupFile() {
+  if (Platform.OS === "web") {
+    return new Promise<PickedBackupFile>((resolve, reject) => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".json,application/json";
+      input.style.display = "none";
+      input.addEventListener("change", () => {
+        const file = input.files?.[0];
+        input.remove();
+        if (file) resolve(file);
+        else reject(new Error("File selection cancelled"));
+      }, { once: true });
+      input.addEventListener("cancel", () => {
+        input.remove();
+        reject(new Error("File selection cancelled"));
+      }, { once: true });
+      document.body.appendChild(input);
+      input.click();
+    });
+  }
   const picked = await File.pickFileAsync(undefined, "application/json");
   return Array.isArray(picked) ? picked[0] : picked;
 }

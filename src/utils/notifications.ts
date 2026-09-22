@@ -15,6 +15,7 @@ Notifications.setNotificationHandler({
 });
 
 export async function requestNotificationPermission() {
+  if (Platform.OS === "web") return false;
   const settings = await Notifications.getPermissionsAsync();
   if (settings.status === "granted") {
     return true;

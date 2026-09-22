@@ -1,8 +1,9 @@
 import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
-import { useContext, useMemo, useState } from "react";
+import { createElement, useContext, useMemo, useState } from "react";
 import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { PerformanceContext } from "../context/PerformanceContext";
-import { useThemedStyles, type AppThemeTokens } from "../context/theme";
+import { useTheme, useThemedStyles, type AppThemeTokens } from "../context/theme";
+import AppNavigation from "../components/AppNavigation";
 import { toFiniteNumber } from "../src/utils/performanceSanitizer";
 
 type DeadlineField = "academic" | "fitness" | "hustle" | "career";
@@ -29,6 +30,7 @@ const toDateKey = (date: Date) => {
 };
 
 export default function Targets() {
+  const { COLORS, mode } = useTheme();
   const styles = useThemedStyles(createStyles);
   const {
     academicTarget,
@@ -102,9 +104,15 @@ export default function Targets() {
       <View style={styles.deadlineBlock}>
         <Text style={styles.helper}>{item.label} Deadline</Text>
         <View style={styles.deadlineRow}>
-          <TouchableOpacity activeOpacity={0.85} style={styles.dateButton} onPress={() => openPicker(field)}>
+          {Platform.OS === "web" ? createElement("input", {
+            type: "date",
+            "aria-label": `${item.label} deadline`,
+            value: valid ? item.value : "",
+            onChange: (event: { target: { value: string } }) => item.setValue(event.target.value),
+            style: { flex: 1, minWidth: 0, padding: 12, borderRadius: 12, border: `1px solid ${COLORS.border}`, background: COLORS.card, color: COLORS.textPrimary, colorScheme: mode === "clean" ? "light" : "dark", font: "inherit" },
+          }) : <TouchableOpacity activeOpacity={0.85} style={styles.dateButton} onPress={() => openPicker(field)}>
             <Text style={styles.dateButtonText}>{item.value || "Pick date"}</Text>
-          </TouchableOpacity>
+          </TouchableOpacity>}
           <TouchableOpacity
             activeOpacity={0.85}
             style={styles.clearDateButton}
@@ -120,6 +128,7 @@ export default function Targets() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <AppNavigation active="Settings" />
       <Text style={styles.title}>Performance Targets</Text>
 
       <Text style={styles.label}>Target Academic Performance Hours / Week</Text>
