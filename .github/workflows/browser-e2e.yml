@@ -200,9 +200,9 @@ jobs:
             const backupData = JSON.parse(require('fs').readFileSync(backupPath, 'utf8'));
             assert(backupData.app === 'student-toolkit' && backupData.data.profileData, 'Backup does not contain the workspace');
             await page.getByText('Edit Targets', { exact: true }).click();
-            await page.getByLabel('Academic deadline', { exact: true }).fill('2027-06-15');
+            await page.locator('input[aria-label="Academic deadline"]:visible').fill('2027-06-15');
             await page.reload({ waitUntil: 'networkidle' });
-            assert(await page.getByLabel('Academic deadline', { exact: true }).inputValue() === '2027-06-15', 'Deadline did not persist');
+            assert(await page.locator('input[aria-label="Academic deadline"]:visible').inputValue() === '2027-06-15', 'Deadline did not persist');
             await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
             const chooserPromise = page.waitForEvent('filechooser');
             await page.getByText('Restore backup', { exact: true }).click();
@@ -211,7 +211,7 @@ jobs:
             await restored;
             await page.getByText(/Welcome.*Audit User/i).waitFor();
             await page.getByText('Edit Targets', { exact: true }).click();
-            assert(await page.getByLabel('Academic deadline', { exact: true }).inputValue() === '', 'Backup did not restore the original deadline');
+            assert(await page.locator('input[aria-label="Academic deadline"]:visible').inputValue() === '', 'Backup did not restore the original deadline');
             await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
 
             assert(runtimeErrors.length === 0, 'Browser runtime errors: ' + runtimeErrors.join(' | '));
